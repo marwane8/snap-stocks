@@ -13,14 +13,3 @@ A little Streamlit app for peeking at stocks and ETFs — no spreadsheets requir
 ## Why correlations, though?
 
 The real point of this app is watching how correlations between stocks and ETFs shift during market corrections — diversification you can count on in calm markets has a habit of quietly disappearing exactly when you need it most. On the Correlation Matrix page, use the **Time period** dropdown to jump straight to a specific crash or correction (Dot-Com Crash, the 2008 GFC, COVID-19, the 2025 Tariff Sell-Off, and more) instead of a rolling window, and check whether your picks moved together tighter than usual. 🐻📉
-
-## Running it
-
-```bash
-pip install -r requirements.txt
-streamlit run app.py
-```
-
-Then open the URL Streamlit gives you and start snooping around. 🕵️
-
-The app's code lives in the [`snap_stocks/`](snap_stocks) package; `app.py` at the root just wires up the pages.
