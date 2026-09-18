@@ -10,6 +10,7 @@ pages = [
         title="Correlation Matrix",
         icon="🔗",
         url_path="correlation-matrix",
+        default=True,
     ),
     st.Page(
         compare.render,
@@ -22,7 +23,6 @@ pages = [
         title="Stock Explorer",
         icon="📈",
         url_path="stock-explorer",
-        default=True,
     ),
 ]
 
