@@ -14,7 +14,7 @@ EVENTS = [
     {
         "name": "COVID-19 Crash",
         "start": "2020-02-19",
-        "end": "2020-04-30",
+        "end": "2020-03-24",
         "description": "Fastest bear-market decline on record, followed by the initial snap-back recovery.",
     },
     {

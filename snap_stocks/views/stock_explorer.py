@@ -24,9 +24,16 @@ def render():
         return
 
     stock_metrics = None
+    baseline_metrics = None
     if len(history) >= 2:
         stock_metrics = metrics.compute_return_metrics(history)
         charts.render_metrics_row(ticker, label, stock_metrics)
+
+        if ticker != BASELINE:
+            start = history.index[0]
+            end = history.index[-1] + pd.Timedelta(days=1)
+            baseline_history = fetch_history(BASELINE, start=start, end=end)
+            baseline_metrics = metrics.compute_return_metrics(baseline_history)
     else:
         st.info("Not enough data in this range to compute volatility metrics.")
 
@@ -40,10 +47,6 @@ def render():
                 {ticker: stock_metrics["returns"]}, colors=charts.PALETTE[:1]
             )
         else:
-            start = history.index[0]
-            end = history.index[-1] + pd.Timedelta(days=1)
-            baseline_history = fetch_history(BASELINE, start=start, end=end)
-            baseline_metrics = metrics.compute_return_metrics(baseline_history)
             charts.render_returns_chart(
                 {ticker: stock_metrics["returns"], BASELINE: baseline_metrics["returns"]},
                 colors=charts.PALETTE,
@@ -51,7 +54,12 @@ def render():
 
     if stock_metrics is not None:
         st.subheader(f"{ticker} — Daily % Change Distribution ({label})")
-        charts.render_returns_histogram(stock_metrics["returns"], ticker)
+        charts.render_returns_histogram(
+            stock_metrics["returns"],
+            ticker,
+            baseline_returns=baseline_metrics["returns"] if baseline_metrics is not None else None,
+            baseline_label=BASELINE,
+        )
 
     st.subheader(f"{ticker} — Volume ({label})")
-    charts.render_bar_chart({ticker: history["Volume"]})
+    charts.render_bar_chart({ticker: history["Volume"]}, colors=charts.PALETTE[:1])

@@ -175,7 +175,7 @@ def _render_normalized_chart(prices):
     st.subheader("Normalized Price Comparison")
     st.caption("Each ticker rebased to 1.00 at the start of the period, for relative performance.")
     normalized = {ticker: metrics.normalize_to_start(prices[ticker]) for ticker in prices.columns}
-    charts.render_line_chart(normalized)
+    charts.render_normalized_chart(normalized)
 
 
 def render():

@@ -63,7 +63,7 @@ def render():
     )
 
     st.subheader(f"{ticker_a} vs {ticker_b} — Normalized ({label})")
-    charts.render_line_chart(
+    charts.render_normalized_chart(
         {
             ticker_a: metrics.normalize_to_start(history_a["Close"]),
             ticker_b: metrics.normalize_to_start(history_b["Close"]),

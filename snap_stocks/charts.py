@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
@@ -10,9 +9,13 @@ PALETTE = ["#dc2626", "#93c5fd"]  # red, light blue
 POSITIVE_COLOR = "#16a34a"  # green
 NEGATIVE_COLOR = "#dc2626"  # red
 CLOSE_LINE_COLOR = "#0891b2"  # cyan
-HISTOGRAM_BAR_COLOR = "#93c5fd"  # light blue
-HISTOGRAM_CURVE_COLOR = "#1d4ed8"  # dark blue
+HISTOGRAM_BAR_COLOR = "#fca5a5"  # light red
+HISTOGRAM_CURVE_COLOR = "#b91c1c"  # dark red
+HISTOGRAM_BASELINE_CURVE_COLOR = "#93c5fd"  # light blue - for a baseline (e.g. SPY) overlay
 DAILY_CHANGE_AXIS_LIMIT = 20  # % - default axis bound for daily-change charts; user can zoom/pan past it
+NORMALIZED_AXIS_TICK = 0.1
+NORMALIZED_AXIS_TICK_LONG_RANGE = 1 # widens past NORMALIZED_LONG_RANGE_YEARS so gridlines don't crowd
+NORMALIZED_LONG_RANGE_YEARS = 5
 
 
 def render_time_period_selectbox(default="Global Financial Crisis (GFC)"):
@@ -45,8 +48,61 @@ def render_ticker_selectbox(label, default, key):
 
 
 def render_line_chart(series_by_label, colors=None):
-    """Overlay one or more named series on a single line chart."""
-    st.line_chart(pd.DataFrame(series_by_label), color=colors)
+    """Overlay one or more named series on a single line chart. With no
+    explicit colors, traces fall back to Plotly's own qualitative color
+    cycle, so this scales to the up-to-10 tickers the correlation view
+    can show without needing a hardcoded palette that long."""
+    fig = go.Figure()
+
+    for i, (label, series) in enumerate(series_by_label.items()):
+        line = {"width": 2}
+        if colors:
+            line["color"] = colors[i % len(colors)]
+        fig.add_trace(
+            go.Scatter(x=series.index, y=series, mode="lines", name=label, line=line)
+        )
+
+    fig.update_layout(
+        xaxis_title="Date",
+        legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1},
+    )
+
+    st.plotly_chart(fig)
+
+
+def render_normalized_chart(series_by_label, colors=None):
+    """Line chart of one or more series rebased to 1.00 at the start of the
+    period. Y-axis gridlines default to every 0.1, widening to every 0.5 once
+    the period spans more than NORMALIZED_LONG_RANGE_YEARS, since a long-run
+    normalized chart can swing several multiples and 0.1 gridlines get too
+    dense to read."""
+    fig = go.Figure()
+
+    for i, (label, series) in enumerate(series_by_label.items()):
+        line = {"width": 2}
+        if colors:
+            line["color"] = colors[i % len(colors)]
+        fig.add_trace(
+            go.Scatter(x=series.index, y=series, mode="lines", name=label, line=line)
+        )
+
+    span_years = max(
+        (series.index.max() - series.index.min()).days / 365.25
+        for series in series_by_label.values()
+    )
+    dtick = (
+        NORMALIZED_AXIS_TICK_LONG_RANGE
+        if span_years > NORMALIZED_LONG_RANGE_YEARS
+        else NORMALIZED_AXIS_TICK
+    )
+
+    fig.update_layout(
+        xaxis_title="Date",
+        yaxis={"dtick": dtick},
+        legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1},
+    )
+
+    st.plotly_chart(fig)
 
 
 def render_returns_chart(series_by_label, colors=None):
@@ -57,21 +113,21 @@ def render_returns_chart(series_by_label, colors=None):
     fig = go.Figure()
     palette = colors or PALETTE
 
-    for (label, series), color in zip(series_by_label.items(), palette):
+    for i, (label, series) in enumerate(series_by_label.items()):
         fig.add_trace(
             go.Scatter(
                 x=series.index,
                 y=series,
                 mode="lines",
                 name=label,
-                line={"color": color, "width": 2},
+                line={"color": palette[i % len(palette)], "width": 2},
             )
         )
 
     fig.update_layout(
         xaxis_title="Date",
         yaxis_title="Daily % Change",
-        yaxis={"range": [-DAILY_CHANGE_AXIS_LIMIT, DAILY_CHANGE_AXIS_LIMIT]},
+        yaxis={"range": [-DAILY_CHANGE_AXIS_LIMIT, DAILY_CHANGE_AXIS_LIMIT], "dtick": 5},
         legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1},
     )
 
@@ -115,11 +171,14 @@ def render_candlestick_chart(history, ticker):
     st.plotly_chart(fig)
 
 
-def render_returns_histogram(returns, ticker, bin_size=0.2):
+def render_returns_histogram(returns, ticker, baseline_returns=None, baseline_label=None, bin_size=0.2):
     """Histogram of daily % returns bucketed at a fixed width, normalized to a
     probability density (rather than raw counts) so the shape is comparable
     across stocks and date ranges, with a fitted normal curve overlaid and a
     rug of the individual observations underneath for per-day hover detail.
+    When baseline_returns is given (e.g. SPY), its own normal curve is
+    overlaid too, so a narrower/wider bell next to it reads as lower/higher
+    volatility than the baseline.
 
     The x-axis defaults to +/-DAILY_CHANGE_AXIS_LIMIT on every chart, so
     the same-shaped distribution looks the same width across tickers and time
@@ -138,10 +197,14 @@ def render_returns_histogram(returns, ticker, bin_size=0.2):
         )
     )
 
+    extent = [abs(returns.min()), abs(returns.max())]
+    if baseline_returns is not None:
+        extent += [abs(baseline_returns.min()), abs(baseline_returns.max())]
+    curve_limit = max(DAILY_CHANGE_AXIS_LIMIT, *extent)
+    x_curve = np.linspace(-curve_limit, curve_limit, 200)
+
     mean, std = returns.mean(), returns.std()
     if std > 0:
-        curve_limit = max(DAILY_CHANGE_AXIS_LIMIT, abs(returns.min()), abs(returns.max()))
-        x_curve = np.linspace(-curve_limit, curve_limit, 200)
         y_curve = np.exp(-0.5 * ((x_curve - mean) / std) ** 2) / (std * (2 * np.pi) ** 0.5)
         fig.add_trace(
             go.Scatter(
@@ -152,6 +215,22 @@ def render_returns_histogram(returns, ticker, bin_size=0.2):
                 line={"color": HISTOGRAM_CURVE_COLOR, "width": 2},
             )
         )
+
+    if baseline_returns is not None:
+        baseline_mean, baseline_std = baseline_returns.mean(), baseline_returns.std()
+        if baseline_std > 0:
+            y_baseline_curve = np.exp(
+                -0.5 * ((x_curve - baseline_mean) / baseline_std) ** 2
+            ) / (baseline_std * (2 * np.pi) ** 0.5)
+            fig.add_trace(
+                go.Scatter(
+                    x=x_curve,
+                    y=y_baseline_curve,
+                    mode="lines",
+                    name=f"{baseline_label} Normal fit",
+                    line={"color": HISTOGRAM_BASELINE_CURVE_COLOR, "width": 2},
+                )
+            )
 
     fig.add_trace(
         go.Scatter(
@@ -182,8 +261,26 @@ def render_returns_histogram(returns, ticker, bin_size=0.2):
 
 
 def render_bar_chart(series_by_label, colors=None):
-    """Overlay one or more named series on a single bar chart."""
-    st.bar_chart(pd.DataFrame(series_by_label), color=colors)
+    """Overlay one or more named series on a single bar chart. Multiple
+    series are layered with transparency rather than grouped side-by-side,
+    since grouped bars are illegible at daily-bar time-series density."""
+    fig = go.Figure()
+    overlay = len(series_by_label) > 1
+
+    for i, (label, series) in enumerate(series_by_label.items()):
+        marker = {"color": colors[i % len(colors)]} if colors else {}
+        fig.add_trace(
+            go.Bar(x=series.index, y=series, name=label, marker=marker, opacity=0.7 if overlay else 1.0)
+        )
+
+    fig.update_layout(
+        xaxis_title="Date",
+        barmode="overlay" if overlay else "relative",
+        bargap=0.02,
+        legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1},
+    )
+
+    st.plotly_chart(fig)
 
 
 def signed_metric(label, value):
