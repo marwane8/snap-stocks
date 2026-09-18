@@ -12,8 +12,12 @@ warnings.filterwarnings(
 def fetch_history(ticker, *, period=None, start=None, end=None):
     """Fetch OHLCV history for a single ticker, by rolling period or explicit date range."""
     if period:
-        return yf.Ticker(ticker).history(period=period)
-    return yf.Ticker(ticker).history(start=start, end=end)
+        history = yf.Ticker(ticker).history(period=period)
+    else:
+        history = yf.Ticker(ticker).history(start=start, end=end)
+    # Drop an in-progress trading session's bar, which yfinance sometimes
+    # returns with NaN OHLC (while Volume partially populates).
+    return history.dropna(subset=["Close"])
 
 
 def fetch_closes(tickers, *, period=None, start=None, end=None):

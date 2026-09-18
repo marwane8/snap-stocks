@@ -1,14 +1,53 @@
 import pandas as pd
+import plotly.graph_objects as go
 import streamlit as st
 
 PALETTE = ["#dc2626", "#93c5fd"]  # red, light blue
 POSITIVE_COLOR = "#16a34a"  # green
 NEGATIVE_COLOR = "#dc2626"  # red
+CLOSE_LINE_COLOR = "#0891b2"  # cyan
 
 
 def render_line_chart(series_by_label, colors=None):
     """Overlay one or more named series on a single line chart."""
     st.line_chart(pd.DataFrame(series_by_label), color=colors)
+
+
+def render_candlestick_chart(history, ticker):
+    """OHLC candlesticks with the close price overlaid as a line."""
+    fig = go.Figure()
+
+    fig.add_trace(
+        go.Candlestick(
+            x=history.index,
+            open=history["Open"],
+            high=history["High"],
+            low=history["Low"],
+            close=history["Close"],
+            name=ticker,
+            increasing_line_color=POSITIVE_COLOR,
+            decreasing_line_color=NEGATIVE_COLOR,
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=history.index,
+            y=history["Close"],
+            mode="lines",
+            name="Close Price",
+            line={"color": CLOSE_LINE_COLOR, "width": 2},
+        )
+    )
+
+    fig.update_layout(
+        xaxis_title="Date",
+        yaxis_title="Price",
+        xaxis_rangeslider_visible=False,
+        legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1},
+    )
+
+    st.plotly_chart(fig)
 
 
 def render_bar_chart(series_by_label, colors=None):

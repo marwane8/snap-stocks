@@ -34,7 +34,7 @@ def _calculate(tickers, *, period=None, start=None, end=None):
 
     if len(closes) >= 2:
         prices = pd.DataFrame(closes)
-        returns = prices.pct_change().dropna()
+        returns = prices.pct_change(fill_method=None).dropna()
         return returns.corr()
     return None
 

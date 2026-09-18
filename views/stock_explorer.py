@@ -47,8 +47,8 @@ def render():
     else:
         st.info("Not enough data in this range to compute volatility metrics.")
 
-    st.subheader(f"{ticker} — Close price ({label})")
-    charts.render_line_chart({ticker: history["Close"]})
+    st.subheader(f"{ticker} — Price ({label})")
+    charts.render_candlestick_chart(history, ticker)
 
     if stock_metrics is not None:
         st.subheader(f"{ticker} vs {BASELINE} — Daily % Change ({label})")

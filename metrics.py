@@ -4,7 +4,7 @@ TRADING_DAYS_PER_YEAR = 252
 def compute_return_metrics(history):
     """Total return, annualized return, and annualized volatility from close-to-close
     daily returns for a single (already-fetched) price history."""
-    returns = history["Close"].pct_change().dropna() * 100
+    returns = history["Close"].pct_change(fill_method=None).dropna() * 100
 
     start_price = history["Close"].iloc[0]
     end_price = history["Close"].iloc[-1]
