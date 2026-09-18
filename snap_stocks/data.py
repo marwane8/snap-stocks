@@ -3,7 +3,7 @@ import warnings
 import streamlit as st
 import yfinance as yf
 
-from ticker import TICKERS_ETF, TICKERS_STOCK
+from .tickers import TICKERS_ETF, TICKERS_STOCK
 
 warnings.filterwarnings(
     "ignore",

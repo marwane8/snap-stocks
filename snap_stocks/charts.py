@@ -2,8 +2,8 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from data import load_ticker_directory
-from events import TIME_PERIOD_OPTIONS
+from .data import load_ticker_directory
+from .events import TIME_PERIOD_OPTIONS
 
 PALETTE = ["#dc2626", "#93c5fd"]  # red, light blue
 POSITIVE_COLOR = "#16a34a"  # green

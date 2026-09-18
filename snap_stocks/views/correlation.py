@@ -3,10 +3,9 @@ import itertools
 import pandas as pd
 import streamlit as st
 
-import charts
-import metrics
-from data import fetch_closes, load_ticker_directory
-from events import resolve_time_period
+from .. import charts, metrics
+from ..data import fetch_closes, load_ticker_directory
+from ..events import resolve_time_period
 
 
 def _init_state():

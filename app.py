@@ -1,6 +1,6 @@
 import streamlit as st
 
-from views import compare, correlation, stock_explorer
+from snap_stocks.views import compare, correlation, stock_explorer
 
 st.set_page_config(page_title="Snap", page_icon="📊", layout="wide")
 
