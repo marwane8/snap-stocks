@@ -11,6 +11,8 @@ from ..events import resolve_time_period
 def _init_state():
     if "corr_tickers" not in st.session_state:
         st.session_state.corr_tickers = ["VUG", "AAPL", "BRK-B"]
+    else:
+        st.session_state.corr_tickers = [t.strip().upper() for t in st.session_state.corr_tickers]
     if "corr_results" not in st.session_state:
         st.session_state.corr_results = None
     if "corr_results_label" not in st.session_state:
@@ -44,20 +46,19 @@ def _render_controls():
     st.caption("ENTER STOCK OR ETF TICKERS (UP TO 10)")
 
     all_symbols = [symbol for symbol, _ in load_ticker_directory()]
-    # Keep any already-selected ticker that isn't in the directory (free-typed) selectable.
-    extra_symbols = [t for t in st.session_state.corr_tickers if t not in all_symbols]
+    all_symbols_set = set(all_symbols)
+    extra_symbols = [t for t in st.session_state.corr_tickers if t not in all_symbols_set]
     options = extra_symbols + all_symbols
 
-    tickers = st.multiselect(
+    st.multiselect(
         "Tickers",
         options=options,
-        default=st.session_state.corr_tickers,
         accept_new_options=True,
         max_selections=10,
         placeholder="Enter ticker (e.g., AAPL, MSFT, NVDA)",
         label_visibility="collapsed",
+        key="corr_tickers",
     )
-    st.session_state.corr_tickers = [t.strip().upper() for t in tickers]
 
     selection = charts.render_time_period_selectbox()
 
@@ -73,7 +74,7 @@ def _render_controls():
         )
 
     if calculate:
-        tickers = st.session_state.corr_tickers
+        tickers = [t.strip().upper() for t in st.session_state.corr_tickers]
         if len(tickers) < 2:
             st.warning("Enter at least 2 tickers to calculate correlation.")
             st.session_state.corr_results = None
