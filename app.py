@@ -6,11 +6,10 @@ st.set_page_config(page_title="Snap", page_icon="📊", layout="wide")
 
 pages = [
     st.Page(
-        stock_explorer.render,
-        title="Stock Explorer",
-        icon="📈",
-        url_path="stock-explorer",
-        default=True,
+        correlation.render,
+        title="Correlation Matrix",
+        icon="🔗",
+        url_path="correlation-matrix",
     ),
     st.Page(
         compare.render,
@@ -19,10 +18,11 @@ pages = [
         url_path="stock-compare",
     ),
     st.Page(
-        correlation.render,
-        title="Correlation Matrix",
-        icon="🔗",
-        url_path="correlation-matrix",
+        stock_explorer.render,
+        title="Stock Explorer",
+        icon="📈",
+        url_path="stock-explorer",
+        default=True,
     ),
 ]
 

@@ -30,9 +30,9 @@ PERIODS = ["5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "10y", "ytd", "max"]
 EVENT_NAMES = [e["name"] for e in EVENTS]
 EVENTS_BY_NAME = {e["name"]: e for e in EVENTS}
 
-# A single "Time period" dropdown's options: rolling periods followed by named
-# crash events, so callers don't need a second "Or view a market crash" field.
-TIME_PERIOD_OPTIONS = PERIODS + EVENT_NAMES
+# A single "Time period" dropdown's options: named crash events followed by
+# rolling periods, so callers don't need a second "Or view a market crash" field.
+TIME_PERIOD_OPTIONS = EVENT_NAMES + PERIODS
 
 
 def resolve_time_period(selection):
