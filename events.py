@@ -24,3 +24,20 @@ EVENTS = [
         "description": "S&P 500 peak to trough (-18.9%) as Trump-era tariff announcements triggered a correction.",
     },
 ]
+
+PERIODS = ["5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "10y", "ytd", "max"]
+
+EVENT_NAMES = [e["name"] for e in EVENTS]
+EVENTS_BY_NAME = {e["name"]: e for e in EVENTS}
+
+# A single "Time period" dropdown's options: rolling periods followed by named
+# crash events, so callers don't need a second "Or view a market crash" field.
+TIME_PERIOD_OPTIONS = PERIODS + EVENT_NAMES
+
+
+def resolve_time_period(selection):
+    """Map a TIME_PERIOD_OPTIONS selection to fetch_history's period/start/end kwargs."""
+    if selection in EVENTS_BY_NAME:
+        event = EVENTS_BY_NAME[selection]
+        return {"start": event["start"], "end": event["end"]}
+    return {"period": selection}

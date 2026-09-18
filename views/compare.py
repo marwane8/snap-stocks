@@ -4,12 +4,7 @@ import streamlit as st
 import charts
 import metrics
 from data import fetch_history
-from events import EVENTS
-
-EVENT_NAMES = [e["name"] for e in EVENTS]
-EVENTS_BY_NAME = {e["name"]: e for e in EVENTS}
-
-PERIODS = ["5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "10y", "ytd", "max"]
+from events import resolve_time_period
 
 
 def render():
@@ -21,11 +16,7 @@ def render():
     with col2:
         ticker_b = st.text_input("Ticker B", value="MSFT").strip().upper()
 
-    col3, col4 = st.columns(2)
-    with col3:
-        period = st.selectbox("Time period", PERIODS, index=1)
-    with col4:
-        event = st.selectbox("Or view a market crash", ["None"] + EVENT_NAMES)
+    label = charts.render_time_period_selectbox()
 
     if not ticker_a or not ticker_b:
         return
@@ -34,13 +25,9 @@ def render():
         st.warning("Enter two different tickers to compare.")
         return
 
-    if event != "None":
-        selected = EVENTS_BY_NAME[event]
-        history_a = fetch_history(ticker_a, start=selected["start"], end=selected["end"])
-        history_b = fetch_history(ticker_b, start=selected["start"], end=selected["end"])
-    else:
-        history_a = fetch_history(ticker_a, period=period)
-        history_b = fetch_history(ticker_b, period=period)
+    period_kwargs = resolve_time_period(label)
+    history_a = fetch_history(ticker_a, **period_kwargs)
+    history_b = fetch_history(ticker_b, **period_kwargs)
 
     if history_a.empty:
         st.warning(f"No data found for '{ticker_a}'.")
@@ -48,8 +35,6 @@ def render():
     if history_b.empty:
         st.warning(f"No data found for '{ticker_b}'.")
         return
-
-    label = event if event != "None" else period
 
     metrics_a = metrics.compute_return_metrics(history_a) if len(history_a) >= 2 else None
     metrics_b = metrics.compute_return_metrics(history_b) if len(history_b) >= 2 else None

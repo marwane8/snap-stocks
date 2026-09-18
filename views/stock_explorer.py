@@ -4,12 +4,7 @@ import streamlit as st
 import charts
 import metrics
 from data import fetch_history
-from events import EVENTS
-
-EVENT_NAMES = [e["name"] for e in EVENTS]
-EVENTS_BY_NAME = {e["name"]: e for e in EVENTS}
-
-PERIODS = ["5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "10y", "ytd", "max"]
+from events import resolve_time_period
 
 BASELINE = "SPY"
 
@@ -18,27 +13,16 @@ def render():
     st.title("Stock Explorer")
 
     ticker = st.text_input("Ticker", value="AAPL").strip().upper()
-
-    col1, col2 = st.columns(2)
-    with col1:
-        period = st.selectbox("Time period", PERIODS, index=1)
-    with col2:
-        event = st.selectbox("Or view a market crash", ["None"] + EVENT_NAMES)
+    label = charts.render_time_period_selectbox()
 
     if not ticker:
         return
 
-    if event != "None":
-        selected = EVENTS_BY_NAME[event]
-        history = fetch_history(ticker, start=selected["start"], end=selected["end"])
-    else:
-        history = fetch_history(ticker, period=period)
+    history = fetch_history(ticker, **resolve_time_period(label))
 
     if history.empty:
         st.warning(f"No data found for '{ticker}'.")
         return
-
-    label = event if event != "None" else period
 
     stock_metrics = None
     if len(history) >= 2:

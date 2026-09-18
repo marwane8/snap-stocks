@@ -26,5 +26,5 @@ pages = [
     ),
 ]
 
-nav = st.navigation(pages)
+nav = st.navigation(pages, position="top")
 nav.run()

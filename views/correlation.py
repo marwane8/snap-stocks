@@ -5,9 +5,7 @@ import streamlit as st
 
 import charts
 from data import fetch_closes
-from events import EVENTS
-
-PERIOD_LABELS = {"1 Year": "1y", "3 Years": "3y", "5 Years": "5y", "10 Years": "10y"}
+from events import resolve_time_period
 
 
 def _init_state():
@@ -40,29 +38,19 @@ def _calculate(tickers, *, period=None, start=None, end=None):
 
 
 def _render_controls():
-    left, right = st.columns([2, 1])
+    st.caption("ENTER STOCK OR ETF TICKERS (UP TO 10)")
+    tickers = st.multiselect(
+        "Tickers",
+        options=st.session_state.corr_tickers,
+        default=st.session_state.corr_tickers,
+        accept_new_options=True,
+        max_selections=10,
+        placeholder="Enter ticker (e.g., AAPL, MSFT, NVDA)",
+        label_visibility="collapsed",
+    )
+    st.session_state.corr_tickers = [t.strip().upper() for t in tickers]
 
-    with left:
-        st.caption("ENTER STOCK OR ETF TICKERS (UP TO 10)")
-        tickers = st.multiselect(
-            "Tickers",
-            options=st.session_state.corr_tickers,
-            default=st.session_state.corr_tickers,
-            accept_new_options=True,
-            max_selections=10,
-            placeholder="Enter ticker (e.g., AAPL, MSFT, NVDA)",
-            label_visibility="collapsed",
-        )
-        st.session_state.corr_tickers = [t.strip().upper() for t in tickers]
-
-    with right:
-        st.caption("TIME PERIOD")
-        period_label = st.pills(
-            "Time period",
-            options=list(PERIOD_LABELS.keys()),
-            default="1 Year",
-            label_visibility="collapsed",
-        )
+    selection = charts.render_time_period_selectbox(default="1y")
 
     col_reset, col_calc = st.columns([1, 1])
     with col_reset:
@@ -80,42 +68,15 @@ def _render_controls():
         if len(tickers) < 2:
             st.warning("Enter at least 2 tickers to calculate correlation.")
             st.session_state.corr_results = None
-        elif not period_label:
+        elif not selection:
             st.warning("Pick a time period.")
             st.session_state.corr_results = None
         else:
             with st.spinner("Fetching data..."):
                 st.session_state.corr_results = _calculate(
-                    tickers, period=PERIOD_LABELS[period_label]
+                    tickers, **resolve_time_period(selection)
                 )
-                st.session_state.corr_results_label = period_label
-
-
-def _render_events():
-    st.divider()
-    st.subheader("Events")
-    st.caption("Analyze correlation during a specific historical market crash")
-
-    event_cols = st.columns(len(EVENTS))
-    for col, event in zip(event_cols, EVENTS):
-        with col:
-            st.markdown(f"**{event['name']}**")
-            st.caption(f"{event['start']} to {event['end']}")
-            st.caption(event["description"])
-            if st.button(
-                "Analyze",
-                key=f"corr_event_{event['name']}",
-                use_container_width=True,
-            ):
-                tickers = st.session_state.corr_tickers
-                if len(tickers) < 2:
-                    st.warning("Enter at least 2 tickers to calculate correlation.")
-                else:
-                    with st.spinner("Fetching data..."):
-                        st.session_state.corr_results = _calculate(
-                            tickers, start=event["start"], end=event["end"]
-                        )
-                        st.session_state.corr_results_label = event["name"]
+                st.session_state.corr_results_label = selection
 
 
 def _render_matrix(corr):
@@ -225,7 +186,6 @@ def _render_insights(corr):
 def render():
     _init_state()
     _render_controls()
-    _render_events()
 
     corr = st.session_state.corr_results
     if corr is not None:

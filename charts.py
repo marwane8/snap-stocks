@@ -2,10 +2,19 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from events import TIME_PERIOD_OPTIONS
+
 PALETTE = ["#dc2626", "#93c5fd"]  # red, light blue
 POSITIVE_COLOR = "#16a34a"  # green
 NEGATIVE_COLOR = "#dc2626"  # red
 CLOSE_LINE_COLOR = "#0891b2"  # cyan
+
+
+def render_time_period_selectbox(default="1mo"):
+    """The single 'Time period' dropdown (rolling periods + named crash events)
+    shared by every view, so each one doesn't build its own options list."""
+    index = TIME_PERIOD_OPTIONS.index(default) if default in TIME_PERIOD_OPTIONS else 0
+    return st.selectbox("Time period", TIME_PERIOD_OPTIONS, index=index)
 
 
 def render_line_chart(series_by_label, colors=None):
