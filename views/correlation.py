@@ -128,54 +128,32 @@ def _render_matrix(corr):
 
 
 def _render_insights(corr):
-    st.subheader("Summary Insights")
-
     tickers_order = list(corr.columns)
     pairs = [
         (a, b, corr.loc[a, b]) for a, b in itertools.combinations(tickers_order, 2)
     ]
-    highest = max(pairs, key=lambda p: p[2])
-    lowest = min(pairs, key=lambda p: p[2])
     avg_corr = sum(p[2] for p in pairs) / len(pairs)
 
     if avg_corr < 0:
         diversification = "Strong diversification"
+        number_color = "#16a34a"
     elif avg_corr < 0.3:
         diversification = "Moderate diversification"
+        number_color = "#2563eb"
     elif avg_corr < 0.6:
         diversification = "Weak diversification"
+        number_color = "#d97706"
     else:
         diversification = "Poor diversification"
+        number_color = "#dc2626"
 
-    c1, c2, c3 = st.columns(3)
-    with c1:
+    st.markdown("<div style='height:20px;'></div>", unsafe_allow_html=True)
+    with st.container(border=True):
         st.markdown(
             f"""
-            <div style='background:#fef2f2; padding:20px; border-radius:12px;'>
-              <div style='color:#b91c1c; font-weight:600;'>Highest Correlation</div>
-              <div style='font-size:2rem; font-weight:700; color:#b91c1c;'>{highest[2]:.2f}</div>
-              <div style='color:#b91c1c;'>{highest[0]} &amp; {highest[1]}</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    with c2:
-        st.markdown(
-            f"""
-            <div style='background:#eff6ff; padding:20px; border-radius:12px;'>
-              <div style='color:#2563eb; font-weight:600;'>Lowest Correlation</div>
-              <div style='font-size:2rem; font-weight:700; color:#2563eb;'>{lowest[2]:.2f}</div>
-              <div style='color:#2563eb;'>{lowest[0]} &amp; {lowest[1]}</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    with c3:
-        st.markdown(
-            f"""
-            <div style='background:#f8fafc; padding:20px; border-radius:12px;'>
+            <div style='text-align:center; padding:8px 0;'>
               <div style='font-weight:600;'>Average Portfolio Correlation</div>
-              <div style='font-size:2rem; font-weight:700;'>{avg_corr:.2f}</div>
+              <div style='font-size:2.5rem; font-weight:700; color:{number_color};'>{avg_corr:.2f}</div>
               <div style='color:#64748b;'>{diversification}</div>
             </div>
             """,

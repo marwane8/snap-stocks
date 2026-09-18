@@ -92,12 +92,44 @@ def correlation_color(value):
 
 
 def render_correlation_card(ticker_a, ticker_b, correlation):
-    bg, text_color = correlation_color(correlation)
+    number_color, _ = correlation_color(correlation)
+    with st.container(border=True):
+        st.markdown(
+            f"""
+            <div style='text-align:center; padding:8px 0;'>
+              <div style='font-weight:600;'>{ticker_a} & {ticker_b} Correlation</div>
+              <div style='font-size:2.5rem; font-weight:700; color:{number_color};'>{correlation:.2f}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+
+def render_price_metric(label, price, change_pct):
+    """A price value with a colored, pill-shaped daily % change badge underneath."""
+    positive = change_pct is not None and change_pct >= 0
+    color = POSITIVE_COLOR if positive else NEGATIVE_COLOR
+    badge_bg = "rgba(22, 163, 74, 0.15)" if positive else "rgba(220, 38, 38, 0.15)"
+    arrow = "↑" if positive else "↓"
+
+    badge_html = ""
+    if change_pct is not None:
+        badge_html = f"""
+        <div style='display:inline-flex; align-items:center; gap:4px;
+                    padding:4px 12px; border-radius:999px; background:{badge_bg};
+                    color:{color}; font-weight:600; font-size:0.875rem;'>
+          {arrow} {abs(change_pct):.2f}%
+        </div>
+        """
+
     st.markdown(
         f"""
-        <div style='background:{bg}; color:{text_color}; padding:20px; border-radius:12px;'>
-          <div style='font-weight:600;'>{ticker_a} & {ticker_b} Correlation</div>
-          <div style='font-size:2rem; font-weight:700;'>{correlation:.2f}</div>
+        <div>
+          <div style='font-size:0.875rem; color:#64748b;'>\U0001f4b0 {label}</div>
+          <div style='display:flex; align-items:center; gap:12px;'>
+            <div style='font-size:2rem; font-weight:600;'>${price:,.2f}</div>
+            {badge_html}
+          </div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -105,18 +137,21 @@ def render_correlation_card(ticker_a, ticker_b, correlation):
 
 
 def render_metrics_row(ticker, label, metrics):
-    """One row of Total Return / Annual Return / Annualized Volatility for a ticker."""
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        signed_metric(f"{ticker} Total Return ({label})", metrics["total_return"])
-    with c2:
-        annual = metrics["annual_return"]
-        if annual is not None:
-            signed_metric(f"{ticker} Annual Return", annual)
-        else:
-            st.metric(f"{ticker} Annual Return", "-")
-    with c3:
-        st.metric(
-            f"{ticker} Annualized Volatility (Std Dev)",
-            f"{metrics['annualized_volatility']:.2f}%",
-        )
+    """One bordered pill of Total Return / Annual Return / Volatility / Price for a ticker."""
+    with st.container(border=True):
+        c1, c2, c3, c4 = st.columns(4)
+        with c1:
+            signed_metric(f"{ticker} Total Return ({label})", metrics["total_return"])
+        with c2:
+            annual = metrics["annual_return"]
+            if annual is not None:
+                signed_metric(f"{ticker} Annual Return", annual)
+            else:
+                st.metric(f"{ticker} Annual Return", "-")
+        with c3:
+            st.metric(
+                f"{ticker} Annualized Volatility (Std Dev)",
+                f"{metrics['annualized_volatility']:.2f}%",
+            )
+        with c4:
+            render_price_metric(f"{ticker} Price", metrics["last_price"], metrics["last_change_pct"])

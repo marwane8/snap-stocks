@@ -26,6 +26,8 @@ def compute_return_metrics(history):
         "total_return": total_return,
         "annual_return": annual_return,
         "annualized_volatility": annualized_volatility,
+        "last_price": end_price,
+        "last_change_pct": returns.iloc[-1] if not returns.empty else None,
     }
 
 

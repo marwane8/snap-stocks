@@ -57,13 +57,13 @@ def render():
             correlation = returns_df[ticker_a].corr(returns_df[ticker_b])
             charts.render_correlation_card(ticker_a, ticker_b, correlation)
 
-    st.subheader(f"{ticker_a} vs {ticker_b} — Close price ({label})")
+    st.subheader(f"{ticker_a} vs {ticker_b} — ({label})")
     charts.render_line_chart(
         {ticker_a: history_a["Close"], ticker_b: history_b["Close"]},
         colors=charts.PALETTE,
     )
 
-    st.subheader(f"{ticker_a} vs {ticker_b} — Normalized Performance (Base = 1.00, {label})")
+    st.subheader(f"{ticker_a} vs {ticker_b} — Normalized ({label})")
     charts.render_line_chart(
         {
             ticker_a: metrics.normalize_to_start(history_a["Close"]),
