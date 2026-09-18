@@ -12,6 +12,8 @@ CLOSE_LINE_COLOR = "#0891b2"  # cyan
 HISTOGRAM_BAR_COLOR = "#fca5a5"  # light red
 HISTOGRAM_CURVE_COLOR = "#b91c1c"  # dark red
 HISTOGRAM_BASELINE_CURVE_COLOR = "#93c5fd"  # light blue - for a baseline (e.g. SPY) overlay
+SCATTER_MARKER_COLOR = "#dc2626"  # red
+SCATTER_FIT_LINE_COLOR = "#1e293b"  # dark slate
 DAILY_CHANGE_AXIS_LIMIT = 20  # % - default axis bound for daily-change charts; user can zoom/pan past it
 NORMALIZED_AXIS_TICK = 0.1
 NORMALIZED_AXIS_TICK_LONG_RANGE = 1 # widens past NORMALIZED_LONG_RANGE_YEARS so gridlines don't crowd
@@ -45,29 +47,6 @@ def render_ticker_selectbox(label, default, key):
         key=key,
     )
     return (ticker or "").strip().upper()
-
-
-def render_line_chart(series_by_label, colors=None):
-    """Overlay one or more named series on a single line chart. With no
-    explicit colors, traces fall back to Plotly's own qualitative color
-    cycle, so this scales to the up-to-10 tickers the correlation view
-    can show without needing a hardcoded palette that long."""
-    fig = go.Figure()
-
-    for i, (label, series) in enumerate(series_by_label.items()):
-        line = {"width": 2}
-        if colors:
-            line["color"] = colors[i % len(colors)]
-        fig.add_trace(
-            go.Scatter(x=series.index, y=series, mode="lines", name=label, line=line)
-        )
-
-    fig.update_layout(
-        xaxis_title="Date",
-        legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1},
-    )
-
-    st.plotly_chart(fig)
 
 
 def render_normalized_chart(series_by_label, colors=None):
@@ -132,6 +111,61 @@ def render_returns_chart(series_by_label, colors=None):
     )
 
     st.plotly_chart(fig)
+
+
+def render_returns_scatter(returns_a, returns_b, label_a, label_b):
+    """Scatter each date's two tickers' daily % changes against each other -
+    the classic 'Scatter, X vs Y' chart: points strung along a diagonal mean
+    the two move together that day, a shapeless cloud means they don't.
+    Square in both pixel dimensions and axis units (equal % per pixel on
+    both axes, via scaleanchor) so a 45-degree line always reads as true 1:1,
+    never stretched by the figure's own aspect ratio. Hovering a point shows
+    the date it happened on plus both tickers' % change that day. A
+    least-squares fit line is overlaid, labeled with its slope (label_b's
+    beta against label_a), to show how tightly the two actually track."""
+    limit = DAILY_CHANGE_AXIS_LIMIT
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=returns_a,
+            y=returns_b,
+            mode="markers",
+            marker={"size": 6, "color": SCATTER_MARKER_COLOR, "opacity": 0.6},
+            customdata=returns_a.index.strftime("%b %d, %Y"),
+            hovertemplate=(
+                f"{label_a}: %{{x:.2f}}%<br>{label_b}: %{{y:.2f}}%<br>%{{customdata}}<extra></extra>"
+            ),
+            showlegend=False,
+        )
+    )
+
+    slope, intercept = np.polyfit(returns_a, returns_b, 1)
+    x_fit = np.array([-limit, limit])
+    y_fit = slope * x_fit + intercept
+    fig.add_trace(
+        go.Scatter(
+            x=x_fit,
+            y=y_fit,
+            mode="lines",
+            name=f"Fit (β={slope:.2f})",
+            line={"color": SCATTER_FIT_LINE_COLOR, "width": 2},
+            hoverinfo="skip",
+        )
+    )
+
+    axis_style = {"range": [-limit, limit], "zeroline": True, "zerolinewidth": 2, "zerolinecolor": "#94a3b8"}
+    fig.update_layout(
+        xaxis_title=label_a,
+        yaxis_title=label_b,
+        xaxis=axis_style,
+        yaxis={**axis_style, "scaleanchor": "x", "scaleratio": 1},
+        width=480,
+        height=480,
+        legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1},
+    )
+
+    st.plotly_chart(fig, use_container_width=False)
 
 
 def render_candlestick_chart(history, ticker):

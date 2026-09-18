@@ -13,7 +13,7 @@ def render():
     with col1:
         ticker_a = charts.render_ticker_selectbox("Ticker A", default="AAPL", key="compare_ticker_a")
     with col2:
-        ticker_b = charts.render_ticker_selectbox("Ticker B", default="MSFT", key="compare_ticker_b")
+        ticker_b = charts.render_ticker_selectbox("Ticker B", default="SPY", key="compare_ticker_b")
 
     label = charts.render_time_period_selectbox()
 
@@ -48,6 +48,7 @@ def render():
     else:
         st.info(f"Not enough {ticker_b} data in this range to compute volatility metrics.")
 
+    returns_df = None
     if metrics_a is not None and metrics_b is not None:
         returns_df = pd.DataFrame(
             {ticker_a: metrics_a["returns"], ticker_b: metrics_b["returns"]}
@@ -55,12 +56,6 @@ def render():
         if len(returns_df) >= 2:
             correlation = returns_df[ticker_a].corr(returns_df[ticker_b])
             charts.render_correlation_card(ticker_a, ticker_b, correlation)
-
-    st.subheader(f"{ticker_a} vs {ticker_b} — ({label})")
-    charts.render_line_chart(
-        {ticker_a: history_a["Close"], ticker_b: history_b["Close"]},
-        colors=charts.PALETTE,
-    )
 
     st.subheader(f"{ticker_a} vs {ticker_b} — Normalized ({label})")
     charts.render_normalized_chart(
@@ -73,10 +68,17 @@ def render():
 
     if metrics_a is not None and metrics_b is not None:
         st.subheader(f"{ticker_a} vs {ticker_b} — Daily % Change ({label})")
-        charts.render_returns_chart(
-            {ticker_a: metrics_a["returns"], ticker_b: metrics_b["returns"]},
-            colors=charts.PALETTE,
-        )
+        col_scatter, col_line = st.columns(2)
+        with col_scatter:
+            if returns_df is not None and len(returns_df) >= 2:
+                charts.render_returns_scatter(
+                    returns_df[ticker_a], returns_df[ticker_b], ticker_a, ticker_b
+                )
+        with col_line:
+            charts.render_returns_chart(
+                {ticker_a: metrics_a["returns"], ticker_b: metrics_b["returns"]},
+                colors=charts.PALETTE,
+            )
 
     st.subheader(f"{ticker_a} vs {ticker_b} — Volume ({label})")
     charts.render_bar_chart(
