@@ -73,7 +73,7 @@ def render():
 
     if metrics_a is not None and metrics_b is not None:
         st.subheader(f"{ticker_a} vs {ticker_b} — Daily % Change ({label})")
-        charts.render_line_chart(
+        charts.render_returns_chart(
             {ticker_a: metrics_a["returns"], ticker_b: metrics_b["returns"]},
             colors=charts.PALETTE,
         )

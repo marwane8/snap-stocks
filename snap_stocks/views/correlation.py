@@ -59,7 +59,7 @@ def _render_controls():
     )
     st.session_state.corr_tickers = [t.strip().upper() for t in tickers]
 
-    selection = charts.render_time_period_selectbox(default="Global Financial Crisis (GFC)")
+    selection = charts.render_time_period_selectbox()
 
     col_reset, col_calc = st.columns([1, 1])
     with col_reset:

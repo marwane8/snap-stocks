@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -9,9 +10,12 @@ PALETTE = ["#dc2626", "#93c5fd"]  # red, light blue
 POSITIVE_COLOR = "#16a34a"  # green
 NEGATIVE_COLOR = "#dc2626"  # red
 CLOSE_LINE_COLOR = "#0891b2"  # cyan
+HISTOGRAM_BAR_COLOR = "#93c5fd"  # light blue
+HISTOGRAM_CURVE_COLOR = "#1d4ed8"  # dark blue
+DAILY_CHANGE_AXIS_LIMIT = 20  # % - default axis bound for daily-change charts; user can zoom/pan past it
 
 
-def render_time_period_selectbox(default="1mo"):
+def render_time_period_selectbox(default="Global Financial Crisis (GFC)"):
     """The single 'Time period' dropdown (rolling periods + named crash events)
     shared by every view, so each one doesn't build its own options list."""
     index = TIME_PERIOD_OPTIONS.index(default) if default in TIME_PERIOD_OPTIONS else 0
@@ -45,6 +49,35 @@ def render_line_chart(series_by_label, colors=None):
     st.line_chart(pd.DataFrame(series_by_label), color=colors)
 
 
+def render_returns_chart(series_by_label, colors=None):
+    """Overlay one or more daily % change series on a line chart, with the
+    y-axis defaulting to +/-DAILY_CHANGE_AXIS_LIMIT so it reads consistently
+    across tickers and lines up with the distribution chart below it; the
+    user can still zoom/pan out to see moves beyond that band."""
+    fig = go.Figure()
+    palette = colors or PALETTE
+
+    for (label, series), color in zip(series_by_label.items(), palette):
+        fig.add_trace(
+            go.Scatter(
+                x=series.index,
+                y=series,
+                mode="lines",
+                name=label,
+                line={"color": color, "width": 2},
+            )
+        )
+
+    fig.update_layout(
+        xaxis_title="Date",
+        yaxis_title="Daily % Change",
+        yaxis={"range": [-DAILY_CHANGE_AXIS_LIMIT, DAILY_CHANGE_AXIS_LIMIT]},
+        legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1},
+    )
+
+    st.plotly_chart(fig)
+
+
 def render_candlestick_chart(history, ticker):
     """OHLC candlesticks with the close price overlaid as a line."""
     fig = go.Figure()
@@ -76,6 +109,72 @@ def render_candlestick_chart(history, ticker):
         xaxis_title="Date",
         yaxis_title="Price",
         xaxis_rangeslider_visible=False,
+        legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1},
+    )
+
+    st.plotly_chart(fig)
+
+
+def render_returns_histogram(returns, ticker, bin_size=0.2):
+    """Histogram of daily % returns bucketed at a fixed width, normalized to a
+    probability density (rather than raw counts) so the shape is comparable
+    across stocks and date ranges, with a fitted normal curve overlaid and a
+    rug of the individual observations underneath for per-day hover detail.
+
+    The x-axis defaults to +/-DAILY_CHANGE_AXIS_LIMIT on every chart, so
+    the same-shaped distribution looks the same width across tickers and time
+    periods; the underlying data (and curve) still extend past it, so a more
+    volatile stock's tails are there for the user to scroll/zoom out to.
+    """
+    fig = go.Figure()
+
+    fig.add_trace(
+        go.Histogram(
+            x=returns,
+            xbins={"size": bin_size},
+            histnorm="probability density",
+            name=ticker,
+            marker_color=HISTOGRAM_BAR_COLOR,
+        )
+    )
+
+    mean, std = returns.mean(), returns.std()
+    if std > 0:
+        curve_limit = max(DAILY_CHANGE_AXIS_LIMIT, abs(returns.min()), abs(returns.max()))
+        x_curve = np.linspace(-curve_limit, curve_limit, 200)
+        y_curve = np.exp(-0.5 * ((x_curve - mean) / std) ** 2) / (std * (2 * np.pi) ** 0.5)
+        fig.add_trace(
+            go.Scatter(
+                x=x_curve,
+                y=y_curve,
+                mode="lines",
+                name="Normal fit",
+                line={"color": HISTOGRAM_CURVE_COLOR, "width": 2},
+            )
+        )
+
+    fig.add_trace(
+        go.Scatter(
+            x=returns,
+            y=[0] * len(returns),
+            mode="markers",
+            marker={
+                "symbol": "line-ns-open",
+                "size": 8,
+                "color": HISTOGRAM_CURVE_COLOR,
+                "opacity": 0.5,
+            },
+            customdata=returns.index.strftime("%b %d, %Y"),
+            hovertemplate="%{x:.2f}%<br>%{customdata}<extra></extra>",
+            showlegend=False,
+        )
+    )
+
+    fig.update_layout(
+        xaxis_title="Daily % Change",
+        yaxis_title="Density",
+        xaxis={"range": [-DAILY_CHANGE_AXIS_LIMIT, DAILY_CHANGE_AXIS_LIMIT]},
+        bargap=0.02,
         legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1},
     )
 

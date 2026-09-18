@@ -36,7 +36,7 @@ def render():
     if stock_metrics is not None:
         st.subheader(f"{ticker} vs {BASELINE} — Daily % Change ({label})")
         if ticker == BASELINE:
-            charts.render_line_chart(
+            charts.render_returns_chart(
                 {ticker: stock_metrics["returns"]}, colors=charts.PALETTE[:1]
             )
         else:
@@ -44,10 +44,14 @@ def render():
             end = history.index[-1] + pd.Timedelta(days=1)
             baseline_history = fetch_history(BASELINE, start=start, end=end)
             baseline_metrics = metrics.compute_return_metrics(baseline_history)
-            charts.render_line_chart(
+            charts.render_returns_chart(
                 {ticker: stock_metrics["returns"], BASELINE: baseline_metrics["returns"]},
                 colors=charts.PALETTE,
             )
+
+    if stock_metrics is not None:
+        st.subheader(f"{ticker} — Daily % Change Distribution ({label})")
+        charts.render_returns_histogram(stock_metrics["returns"], ticker)
 
     st.subheader(f"{ticker} — Volume ({label})")
     charts.render_bar_chart({ticker: history["Volume"]})
