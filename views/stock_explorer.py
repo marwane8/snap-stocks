@@ -12,7 +12,7 @@ BASELINE = "SPY"
 def render():
     st.title("Stock Explorer")
 
-    ticker = st.text_input("Ticker", value="AAPL").strip().upper()
+    ticker = charts.render_ticker_selectbox("Ticker", default="AAPL", key="explorer_ticker")
     label = charts.render_time_period_selectbox()
 
     if not ticker:

@@ -2,6 +2,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from data import load_ticker_directory
 from events import TIME_PERIOD_OPTIONS
 
 PALETTE = ["#dc2626", "#93c5fd"]  # red, light blue
@@ -15,6 +16,28 @@ def render_time_period_selectbox(default="1mo"):
     shared by every view, so each one doesn't build its own options list."""
     index = TIME_PERIOD_OPTIONS.index(default) if default in TIME_PERIOD_OPTIONS else 0
     return st.selectbox("Time period", TIME_PERIOD_OPTIONS, index=index)
+
+
+def render_ticker_selectbox(label, default, key):
+    """A single-ticker picker searchable by prefix, showing 'SYMBOL - Name',
+    shared by every view that looks up one ticker at a time."""
+    names_by_symbol = dict(load_ticker_directory())
+    options = list(names_by_symbol) if default in names_by_symbol else [default, *names_by_symbol]
+
+    def _format(symbol):
+        name = names_by_symbol.get(symbol)
+        return f"{symbol} - {name}" if name else symbol
+
+    ticker = st.selectbox(
+        label,
+        options=options,
+        index=options.index(default),
+        format_func=_format,
+        accept_new_options=True,
+        filter_mode="prefix",
+        key=key,
+    )
+    return (ticker or "").strip().upper()
 
 
 def render_line_chart(series_by_label, colors=None):

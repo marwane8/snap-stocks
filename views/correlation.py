@@ -4,7 +4,8 @@ import pandas as pd
 import streamlit as st
 
 import charts
-from data import fetch_closes
+import metrics
+from data import fetch_closes, load_ticker_directory
 from events import resolve_time_period
 
 
@@ -15,12 +16,15 @@ def _init_state():
         st.session_state.corr_results = None
     if "corr_results_label" not in st.session_state:
         st.session_state.corr_results_label = None
+    if "corr_prices" not in st.session_state:
+        st.session_state.corr_prices = None
 
 
 def _reset():
     st.session_state.corr_tickers = []
     st.session_state.corr_results = None
     st.session_state.corr_results_label = None
+    st.session_state.corr_prices = None
 
 
 def _calculate(tickers, *, period=None, start=None, end=None):
@@ -33,15 +37,21 @@ def _calculate(tickers, *, period=None, start=None, end=None):
     if len(closes) >= 2:
         prices = pd.DataFrame(closes)
         returns = prices.pct_change(fill_method=None).dropna()
-        return returns.corr()
-    return None
+        return returns.corr(), prices
+    return None, None
 
 
 def _render_controls():
     st.caption("ENTER STOCK OR ETF TICKERS (UP TO 10)")
+
+    all_symbols = [symbol for symbol, _ in load_ticker_directory()]
+    # Keep any already-selected ticker that isn't in the directory (free-typed) selectable.
+    extra_symbols = [t for t in st.session_state.corr_tickers if t not in all_symbols]
+    options = extra_symbols + all_symbols
+
     tickers = st.multiselect(
         "Tickers",
-        options=st.session_state.corr_tickers,
+        options=options,
         default=st.session_state.corr_tickers,
         accept_new_options=True,
         max_selections=10,
@@ -54,7 +64,7 @@ def _render_controls():
 
     col_reset, col_calc = st.columns([1, 1])
     with col_reset:
-        st.button("🗑️ Reset", on_click=_reset, use_container_width=True, key="corr_reset")
+        st.button("️Reset", on_click=_reset, use_container_width=True, key="corr_reset")
     with col_calc:
         calculate = st.button(
             "Calculate Correlation",
@@ -73,9 +83,9 @@ def _render_controls():
             st.session_state.corr_results = None
         else:
             with st.spinner("Fetching data..."):
-                st.session_state.corr_results = _calculate(
-                    tickers, **resolve_time_period(selection)
-                )
+                corr, prices = _calculate(tickers, **resolve_time_period(selection))
+                st.session_state.corr_results = corr
+                st.session_state.corr_prices = prices
                 st.session_state.corr_results_label = selection
 
 
@@ -161,6 +171,14 @@ def _render_insights(corr):
         )
 
 
+def _render_normalized_chart(prices):
+    st.markdown("<div style='height:20px;'></div>", unsafe_allow_html=True)
+    st.subheader("Normalized Price Comparison")
+    st.caption("Each ticker rebased to 1.00 at the start of the period, for relative performance.")
+    normalized = {ticker: metrics.normalize_to_start(prices[ticker]) for ticker in prices.columns}
+    charts.render_line_chart(normalized)
+
+
 def render():
     _init_state()
     _render_controls()
@@ -169,3 +187,4 @@ def render():
     if corr is not None:
         _render_matrix(corr)
         _render_insights(corr)
+        _render_normalized_chart(st.session_state.corr_prices)

@@ -12,9 +12,9 @@ def render():
 
     col1, col2 = st.columns(2)
     with col1:
-        ticker_a = st.text_input("Ticker A", value="AAPL").strip().upper()
+        ticker_a = charts.render_ticker_selectbox("Ticker A", default="AAPL", key="compare_ticker_a")
     with col2:
-        ticker_b = st.text_input("Ticker B", value="MSFT").strip().upper()
+        ticker_b = charts.render_ticker_selectbox("Ticker B", default="MSFT", key="compare_ticker_b")
 
     label = charts.render_time_period_selectbox()
 
