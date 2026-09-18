@@ -1,9 +1,9 @@
-import csv
 import warnings
-from pathlib import Path
 
 import streamlit as st
 import yfinance as yf
+
+from ticker import TICKERS_ETF, TICKERS_STOCK
 
 warnings.filterwarnings(
     "ignore",
@@ -11,18 +11,11 @@ warnings.filterwarnings(
     category=FutureWarning,
 )
 
-TICKER_DIRECTORY_DIR = Path(__file__).parent / "tickers"
-TICKER_DIRECTORY_FILES = ["tickers_stock.csv", "tickers_etf.csv"]
-
 
 @st.cache_data
 def load_ticker_directory():
-    """(symbol, name) pairs for every actively listed stock and ETF ticker, in file order."""
-    directory = []
-    for filename in TICKER_DIRECTORY_FILES:
-        with open(TICKER_DIRECTORY_DIR / filename, newline="", encoding="utf-8") as f:
-            directory.extend((row["Symbol"], row["Name"]) for row in csv.DictReader(f))
-    return directory
+    """(symbol, name) pairs for every actively listed stock and ETF ticker, stocks first."""
+    return list(TICKERS_STOCK.items()) + list(TICKERS_ETF.items())
 
 
 def fetch_history(ticker, *, period=None, start=None, end=None):
