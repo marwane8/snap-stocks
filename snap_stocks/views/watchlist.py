@@ -6,8 +6,8 @@ import streamlit as st
 from .. import charts, metrics
 from ..data import fetch_history
 
-WATCHLIST_TICKERS = ["IAUM", "USO", "VUG"]
-TICKER_COLORS = {"IAUM": "#d4af37", "USO": "#8b4513", "VUG": "#dc2626"}  # gold, brown, red
+WATCHLIST_TICKERS = ["IAUM", "USO", "VUG", "AAPL"]
+TICKER_COLORS = {"IAUM": "#d4af37", "USO": "#8b4513", "VUG": "#2663dc"}  # gold, brown, blue 
 SLIDER_LOOKBACK_YEARS = 10
 
 
@@ -68,5 +68,5 @@ def render():
     if missing_prices:
         st.warning(f"No data found for: {', '.join(sorted(missing_prices))}")
     if prices:
-        colors = [TICKER_COLORS[ticker] for ticker in prices]
+        colors = [TICKER_COLORS.get(ticker) for ticker in prices]
         charts.render_price_chart(prices, colors=colors)

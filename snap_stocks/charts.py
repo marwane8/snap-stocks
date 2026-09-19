@@ -63,12 +63,15 @@ def render_ticker_selectbox(label, default, key, placeholder=None, label_visibil
 def render_price_chart(series_by_label, colors=None):
     """Overlay one or more raw (not rebased) price series on a line chart.
     With no explicit colors, traces fall back to Plotly's own qualitative
-    color cycle."""
+    color cycle. `colors` can also be a list with `None` entries mixed in -
+    those traces individually fall back to Plotly's automatic color cycle
+    too, so a fixed palette for a few known series can coexist with
+    dynamically colored ones for anything added beyond it."""
     fig = go.Figure()
 
     for i, (label, series) in enumerate(series_by_label.items()):
         line = {"width": 2}
-        if colors:
+        if colors and colors[i % len(colors)] is not None:
             line["color"] = colors[i % len(colors)]
         fig.add_trace(
             go.Scatter(x=series.index, y=series, mode="lines", name=label, line=line)
@@ -182,7 +185,7 @@ def render_returns_scatter(returns_a, returns_b, label_a, label_b):
             x=x_fit,
             y=y_fit,
             mode="lines",
-            name=f"Fit (β={slope:.2f})",
+            name=f"Fit (β={slope:.2f}, slope={slope:.2f})",
             line={"color": SCATTER_FIT_LINE_COLOR, "width": 2},
             hoverinfo="skip",
         )
