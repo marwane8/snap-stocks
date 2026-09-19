@@ -121,26 +121,26 @@ def render_returns_scatter(returns_a, returns_b, label_a, label_b):
     both axes, via scaleanchor) so a 45-degree line always reads as true 1:1,
     never stretched by the figure's own aspect ratio. Hovering a point shows
     the date it happened on plus both tickers' % change that day. A
-    least-squares fit line is overlaid, labeled with its slope (label_b's
-    beta against label_a), to show how tightly the two actually track."""
+    least-squares fit line is overlaid, labeled with its slope (label_a's
+    beta against label_b), to show how tightly the two actually track."""
     limit = DAILY_CHANGE_AXIS_LIMIT
 
     fig = go.Figure()
     fig.add_trace(
         go.Scatter(
-            x=returns_a,
-            y=returns_b,
+            x=returns_b,
+            y=returns_a,
             mode="markers",
             marker={"size": 6, "color": SCATTER_MARKER_COLOR, "opacity": 0.6},
             customdata=returns_a.index.strftime("%b %d, %Y"),
             hovertemplate=(
-                f"{label_a}: %{{x:.2f}}%<br>{label_b}: %{{y:.2f}}%<br>%{{customdata}}<extra></extra>"
+                f"{label_a}: %{{y:.2f}}%<br>{label_b}: %{{x:.2f}}%<br>%{{customdata}}<extra></extra>"
             ),
             showlegend=False,
         )
     )
 
-    slope, intercept = np.polyfit(returns_a, returns_b, 1)
+    slope, intercept = np.polyfit(returns_b, returns_a, 1)
     x_fit = np.array([-limit, limit])
     y_fit = slope * x_fit + intercept
     fig.add_trace(
@@ -156,8 +156,8 @@ def render_returns_scatter(returns_a, returns_b, label_a, label_b):
 
     axis_style = {"range": [-limit, limit], "zeroline": True, "zerolinewidth": 2, "zerolinecolor": "#94a3b8"}
     fig.update_layout(
-        xaxis_title=label_a,
-        yaxis_title=label_b,
+        xaxis_title=label_b,
+        yaxis_title=label_a,
         xaxis=axis_style,
         yaxis={**axis_style, "scaleanchor": "x", "scaleratio": 1},
         width=480,
