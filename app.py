@@ -1,15 +1,15 @@
 import streamlit as st
 
-from snap_stocks.views import compare, correlation, portfolio, stock_explorer
+from snap_stocks.views import compare, correlation, portfolio, stock_explorer, watchlist
 
 st.set_page_config(page_title="Snap", page_icon="📊", layout="wide")
 
 pages = [
     st.Page(
-        correlation.render,
-        title="Correlation Matrix",
-        icon="🔗",
-        url_path="correlation-matrix",
+        watchlist.render,
+        title="Watch List",
+        icon="👀",
+        url_path="watch-list",
         default=True,
     ),
     st.Page(
@@ -30,6 +30,13 @@ pages = [
         icon="💼",
         url_path="portfolio-simulator",
     ),
+    st.Page(
+        correlation.render,
+        title="Correlation Matrix",
+        icon="🔗",
+        url_path="correlation-matrix",
+    ),
+
 ]
 
 nav = st.navigation(pages, position="top")

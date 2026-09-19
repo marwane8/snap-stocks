@@ -29,6 +29,18 @@ def render():
         stock_metrics = metrics.compute_return_metrics(history)
         charts.render_metrics_row(ticker, label, stock_metrics)
 
+        # A true 52-week window (51 weeks back from the last close of the
+        # selected period), not the selected period's own span - so it
+        # tracks the period's end date without stretching/shrinking to
+        # match how long that period happens to be.
+        week52_end = history.index[-1]
+        week52_start = week52_end - pd.Timedelta(weeks=51)
+        week52_history = fetch_history(ticker, start=week52_start, end=week52_end + pd.Timedelta(days=1))
+        if not week52_history.empty:
+            price_range = metrics.compute_price_range(week52_history)
+            with st.container(border=True):
+                charts.render_range_gauge(ticker, price_range["price"], price_range["low"], price_range["high"])
+
         if ticker != BASELINE:
             start = history.index[0]
             end = history.index[-1] + pd.Timedelta(days=1)

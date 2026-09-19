@@ -15,6 +15,7 @@ HISTOGRAM_BASELINE_CURVE_COLOR = "#93c5fd"  # light blue - for a baseline (e.g. 
 SCATTER_MARKER_COLOR = "#dc2626"  # red
 SCATTER_FIT_LINE_COLOR = "#1e293b"  # dark slate
 DAILY_CHANGE_AXIS_LIMIT = 20  # % - default axis bound for daily-change charts; user can zoom/pan past it
+RANGE_GAUGE_COLORS = [NEGATIVE_COLOR, "#f59e0b", "#86efac", POSITIVE_COLOR]  # red, orange, light green, green
 NORMALIZED_AXIS_TICK = 0.1
 NORMALIZED_AXIS_TICK_LONG_RANGE = 1 # widens past NORMALIZED_LONG_RANGE_YEARS so gridlines don't crowd
 NORMALIZED_LONG_RANGE_YEARS = 5
@@ -57,6 +58,29 @@ def render_ticker_selectbox(label, default, key, placeholder=None, label_visibil
         label_visibility=label_visibility,
     )
     return (ticker or "").strip().upper()
+
+
+def render_price_chart(series_by_label, colors=None):
+    """Overlay one or more raw (not rebased) price series on a line chart.
+    With no explicit colors, traces fall back to Plotly's own qualitative
+    color cycle."""
+    fig = go.Figure()
+
+    for i, (label, series) in enumerate(series_by_label.items()):
+        line = {"width": 2}
+        if colors:
+            line["color"] = colors[i % len(colors)]
+        fig.add_trace(
+            go.Scatter(x=series.index, y=series, mode="lines", name=label, line=line)
+        )
+
+    fig.update_layout(
+        xaxis_title="Date",
+        yaxis_title="Price",
+        legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1},
+    )
+
+    st.plotly_chart(fig)
 
 
 def render_normalized_chart(series_by_label, colors=None):
@@ -323,6 +347,35 @@ def render_bar_chart(series_by_label, colors=None):
         bargap=0.02,
         legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1},
     )
+
+    st.plotly_chart(fig)
+
+
+def render_range_gauge(ticker, price, low, high):
+    """A half-dial gauge showing where a stock's last close sits between its
+    52-week low and high, banded red (bottom quarter, near the low) through
+    orange and light green to dark green (top quarter, near the high). The
+    dark bar fills from the low end up to the current price, same as the
+    reference dashboard's analyst-rating gauges."""
+    span = high - low
+    edges = [low + span * f for f in (0, 0.25, 0.5, 0.75, 1.0)] if span > 0 else [low] * 4 + [high]
+
+    fig = go.Figure(
+        go.Indicator(
+            mode="gauge+number",
+            value=price,
+            title={"text": ticker},
+            number={"prefix": "$", "valueformat": ".2f"},
+            gauge={
+                "axis": {"range": [low, high]},
+                "bar": {"color": SCATTER_FIT_LINE_COLOR},
+                "steps": [
+                    {"range": [edges[i], edges[i + 1]], "color": RANGE_GAUGE_COLORS[i]} for i in range(4)
+                ],
+            },
+        )
+    )
+    fig.update_layout(height=300, margin={"t": 60, "b": 10, "l": 30, "r": 30})
 
     st.plotly_chart(fig)
 

@@ -31,6 +31,19 @@ def compute_return_metrics(history):
     }
 
 
+def compute_price_range(history):
+    """Last close, high, and low over a given (already-fetched) price
+    history, from the High/Low columns rather than just Close so the range
+    reflects true intraday extremes. The caller decides the window - a fixed
+    trailing year for a "52-week range", or whatever period is selected
+    elsewhere on the page."""
+    return {
+        "price": history["Close"].iloc[-1],
+        "low": history["Low"].min(),
+        "high": history["High"].max(),
+    }
+
+
 def normalize_to_start(series):
     """Rebase a price series so it starts at 1.00, for relative-performance comparison."""
     return series / series.iloc[0]
