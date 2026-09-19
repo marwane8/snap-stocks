@@ -27,11 +27,19 @@ def render_time_period_selectbox(default="Global Financial Crisis (GFC)"):
     return st.selectbox("Time period", TIME_PERIOD_OPTIONS, index=index)
 
 
-def render_ticker_selectbox(label, default, key):
+def render_ticker_selectbox(label, default, key, placeholder=None, label_visibility="visible"):
     """A single-ticker picker searchable by prefix, showing 'SYMBOL - Name',
-    shared by every view that looks up one ticker at a time."""
+    shared by every view that looks up one ticker at a time. default=None
+    starts the field empty (index=None) with `placeholder` shown, for an
+    optional slot rather than one that always has a ticker pre-selected."""
     names_by_symbol = dict(load_ticker_directory())
-    options = list(names_by_symbol) if default in names_by_symbol else [default, *names_by_symbol]
+
+    if default is None:
+        options = list(names_by_symbol)
+        index = None
+    else:
+        options = list(names_by_symbol) if default in names_by_symbol else [default, *names_by_symbol]
+        index = options.index(default)
 
     def _format(symbol):
         name = names_by_symbol.get(symbol)
@@ -40,11 +48,13 @@ def render_ticker_selectbox(label, default, key):
     ticker = st.selectbox(
         label,
         options=options,
-        index=options.index(default),
+        index=index,
         format_func=_format,
         accept_new_options=True,
         filter_mode="prefix",
         key=key,
+        placeholder=placeholder,
+        label_visibility=label_visibility,
     )
     return (ticker or "").strip().upper()
 
