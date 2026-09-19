@@ -175,7 +175,7 @@ def render_returns_scatter(returns_a, returns_b, label_a, label_b):
         legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1},
     )
 
-    st.plotly_chart(fig, use_container_width=False)
+    st.plotly_chart(fig, width="content")
 
 
 def render_candlestick_chart(history, ticker):

@@ -13,16 +13,16 @@ pages = [
         default=True,
     ),
     st.Page(
-        compare.render,
-        title="Stock Compare",
-        icon="⚖️",
-        url_path="stock-compare",
-    ),
-    st.Page(
         stock_explorer.render,
         title="Stock Explorer",
         icon="📈",
         url_path="stock-explorer",
+    ),
+    st.Page(
+        compare.render,
+        title="Stock Compare",
+        icon="⚖️",
+        url_path="stock-compare",
     ),
     st.Page(
         portfolio.render,

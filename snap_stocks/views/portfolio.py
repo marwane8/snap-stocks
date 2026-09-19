@@ -5,7 +5,7 @@ from .. import charts, metrics
 from ..data import fetch_history
 from ..events import resolve_time_period
 
-BASELINE = "SPY"
+DEFAULT_COMPARE_TICKER = "SPY"
 MAX_ROWS = 10
 
 
@@ -128,6 +128,9 @@ def render():
 
     allocations = _render_allocation_inputs()
     label = charts.render_time_period_selectbox()
+    compare_ticker = charts.render_ticker_selectbox(
+        "Compare stock", default=DEFAULT_COMPARE_TICKER, key="portfolio_compare_ticker"
+    )
 
     if not allocations:
         st.info("Enter at least one ticker and dollar amount to simulate a portfolio.")
@@ -154,27 +157,28 @@ def render():
 
         start = portfolio.index[0]
         end = portfolio.index[-1] + pd.Timedelta(days=1)
-        baseline_history = fetch_history(BASELINE, start=start, end=end)
-        if len(baseline_history) >= 2:
+        baseline_history = fetch_history(compare_ticker, start=start, end=end) if compare_ticker else None
+        if baseline_history is not None and len(baseline_history) >= 2:
             # Total return/annual return/volatility are scale-invariant (they
             # come from % changes), but scale Close by the same total dollar
-            # amount so the "Price" tile shows what your money would be
-            # worth today if it had all gone into SPY - an apples-to-apples
-            # dollar figure next to the Portfolio tile, not SPY's own share price.
-            spy_shares = total_invested / baseline_history["Close"].iloc[0]
-            baseline_value = pd.DataFrame({"Close": baseline_history["Close"] * spy_shares})
+            # amount so the "Price" tile shows what your money would be worth
+            # today if it had all gone into the comparison stock instead - an
+            # apples-to-apples dollar figure next to the Portfolio tile, not
+            # that stock's own share price.
+            compare_shares = total_invested / baseline_history["Close"].iloc[0]
+            baseline_value = pd.DataFrame({"Close": baseline_history["Close"] * compare_shares})
             baseline_metrics = metrics.compute_return_metrics(baseline_value)
 
         charts.render_metrics_row("Portfolio", label, portfolio_metrics)
         if baseline_metrics is not None:
-            charts.render_metrics_row(BASELINE, label, baseline_metrics)
+            charts.render_metrics_row(compare_ticker, label, baseline_metrics)
 
             returns_df = pd.DataFrame(
-                {"Portfolio": portfolio_metrics["returns"], BASELINE: baseline_metrics["returns"]}
+                {"Portfolio": portfolio_metrics["returns"], compare_ticker: baseline_metrics["returns"]}
             ).dropna()
             if len(returns_df) >= 2:
-                correlation = returns_df["Portfolio"].corr(returns_df[BASELINE])
-                charts.render_correlation_card("Portfolio", BASELINE, correlation)
+                correlation = returns_df["Portfolio"].corr(returns_df[compare_ticker])
+                charts.render_correlation_card("Portfolio", compare_ticker, correlation)
     else:
         st.info("Not enough data in this range to compute volatility metrics.")
 
@@ -182,27 +186,27 @@ def render():
     charts.render_candlestick_chart(portfolio, "Portfolio")
 
     if baseline_history is not None and len(baseline_history) >= 2:
-        st.subheader(f"Portfolio vs {BASELINE} — Normalized ({label})")
+        st.subheader(f"Portfolio vs {compare_ticker} — Normalized ({label})")
         charts.render_normalized_chart(
             {
                 "Portfolio": metrics.normalize_to_start(portfolio["Close"]),
-                BASELINE: metrics.normalize_to_start(baseline_history["Close"]),
+                compare_ticker: metrics.normalize_to_start(baseline_history["Close"]),
             },
             colors=charts.PALETTE,
         )
 
     if portfolio_metrics is not None:
-        st.subheader(f"Portfolio vs {BASELINE} — Daily % Change ({label})")
+        st.subheader(f"Portfolio vs {compare_ticker} — Daily % Change ({label})")
         if baseline_metrics is not None:
             col_scatter, col_line = st.columns(2)
             with col_scatter:
                 if returns_df is not None and len(returns_df) >= 2:
                     charts.render_returns_scatter(
-                        returns_df["Portfolio"], returns_df[BASELINE], "Portfolio", BASELINE
+                        returns_df["Portfolio"], returns_df[compare_ticker], "Portfolio", compare_ticker
                     )
             with col_line:
                 charts.render_returns_chart(
-                    {"Portfolio": portfolio_metrics["returns"], BASELINE: baseline_metrics["returns"]},
+                    {"Portfolio": portfolio_metrics["returns"], compare_ticker: baseline_metrics["returns"]},
                     colors=charts.PALETTE,
                 )
         else:
@@ -216,5 +220,5 @@ def render():
             portfolio_metrics["returns"],
             "Portfolio",
             baseline_returns=baseline_metrics["returns"] if baseline_metrics is not None else None,
-            baseline_label=BASELINE,
+            baseline_label=compare_ticker,
         )

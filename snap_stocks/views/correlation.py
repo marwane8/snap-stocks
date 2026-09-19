@@ -64,12 +64,12 @@ def _render_controls():
 
     col_reset, col_calc = st.columns([1, 1])
     with col_reset:
-        st.button("️Reset", on_click=_reset, use_container_width=True, key="corr_reset")
+        st.button("️Reset", on_click=_reset, width="stretch", key="corr_reset")
     with col_calc:
         calculate = st.button(
             "Calculate Correlation",
             type="primary",
-            use_container_width=True,
+            width="stretch",
             key="corr_calculate",
         )
 
