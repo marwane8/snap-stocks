@@ -6,13 +6,20 @@ from ..data import fetch_history
 from ..events import resolve_time_period
 
 DEFAULT_COMPARE_TICKER = "SPY"
+DEFAULT_ALLOCATIONS = [("VUG", 50000.0), ("USO", 50000.0), ("GLD", 50000.0)]
 MAX_ROWS = 10
 
 
 def _init_row_state():
     if "portfolio_row_ids" not in st.session_state:
-        st.session_state.portfolio_row_ids = [0]
-        st.session_state.portfolio_next_row_id = 1
+        row_ids = list(range(len(DEFAULT_ALLOCATIONS)))
+        st.session_state.portfolio_row_ids = row_ids
+        st.session_state.portfolio_next_row_id = len(row_ids)
+        # Pre-seed each row's widget keys before they're instantiated below,
+        # which is the only safe time to set a key-bound widget's value.
+        for row_id, (ticker, amount) in zip(row_ids, DEFAULT_ALLOCATIONS):
+            st.session_state[f"portfolio_ticker_{row_id}"] = ticker
+            st.session_state[f"portfolio_amount_{row_id}"] = amount
 
 
 def _add_row():

@@ -10,7 +10,7 @@ from ..events import resolve_time_period
 
 def _init_state():
     if "corr_tickers" not in st.session_state:
-        st.session_state.corr_tickers = ["VUG", "AAPL", "BRK-B"]
+        st.session_state.corr_tickers = ["VUG", "USO", "GLD"]
     else:
         st.session_state.corr_tickers = [t.strip().upper() for t in st.session_state.corr_tickers]
     if "corr_results" not in st.session_state:

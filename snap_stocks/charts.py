@@ -21,7 +21,7 @@ NORMALIZED_AXIS_TICK_LONG_RANGE = 1 # widens past NORMALIZED_LONG_RANGE_YEARS so
 NORMALIZED_LONG_RANGE_YEARS = 5
 
 
-def render_time_period_selectbox(default="Global Financial Crisis (GFC)"):
+def render_time_period_selectbox(default="1y"):
     """The single 'Time period' dropdown (rolling periods + named crash events)
     shared by every view, so each one doesn't build its own options list."""
     index = TIME_PERIOD_OPTIONS.index(default) if default in TIME_PERIOD_OPTIONS else 0
