@@ -71,6 +71,7 @@ def render():
             ticker,
             baseline_returns=baseline_metrics["returns"] if baseline_metrics is not None else None,
             baseline_label=BASELINE,
+            bucket_size=5,
         )
 
     st.subheader(f"{ticker} — Volume ({label})")

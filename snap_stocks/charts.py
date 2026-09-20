@@ -8,6 +8,7 @@ PALETTE = ["#dc2626", "#93c5fd"]  # red, light blue
 POSITIVE_COLOR = "#16a34a"  # green
 NEGATIVE_COLOR = "#dc2626"  # red
 CLOSE_LINE_COLOR = "#0891b2"  # cyan
+BUCKET_BAR_COLOR = "rgba(148, 163, 184, 0.35)"  # gray - day-count buckets behind the histogram
 HISTOGRAM_BAR_COLOR = "#fca5a5"  # light red
 HISTOGRAM_CURVE_COLOR = "#b91c1c"  # dark red
 HISTOGRAM_BASELINE_CURVE_COLOR = "#93c5fd"  # light blue - for a baseline (e.g. SPY) overlay
@@ -238,7 +239,7 @@ def render_candlestick_chart(history, ticker):
     st.plotly_chart(fig)
 
 
-def render_returns_histogram(returns, ticker, baseline_returns=None, baseline_label=None, bin_size=0.2):
+def render_returns_histogram(returns, ticker, baseline_returns=None, baseline_label=None, bin_size=0.2, bucket_size=None):
     """Histogram of daily % returns bucketed at a fixed width, normalized to a
     probability density (rather than raw counts) so the shape is comparable
     across stocks and date ranges, with a fitted normal curve overlaid and a
@@ -251,8 +252,32 @@ def render_returns_histogram(returns, ticker, baseline_returns=None, baseline_la
     the same-shaped distribution looks the same width across tickers and time
     periods; the underlying data (and curve) still extend past it, so a more
     volatile stock's tails are there for the user to scroll/zoom out to.
+
+    When bucket_size is given (e.g. 5), gray bars behind everything else show
+    how many days fall in each bucket of that width (hover for the range and
+    day count). Counts and density are different scales, so the bars use the
+    right "Days" axis and the density traces use an overlaid left axis.
     """
     fig = go.Figure()
+
+    density_axis = {}
+    if bucket_size:
+        limit = max(15, int(np.ceil(max(abs(returns.min()), abs(returns.max())) / bucket_size)) * bucket_size)
+        edges = np.arange(-limit, limit + bucket_size, bucket_size)
+        counts, _ = np.histogram(returns, bins=edges)
+        lows, highs = edges[:-1], edges[1:]
+        fig.add_trace(
+            go.Bar(
+                x=(lows + highs) / 2,
+                y=counts,
+                width=bucket_size,
+                name=f"Days per {bucket_size}% bucket",
+                marker_color=BUCKET_BAR_COLOR,
+                customdata=np.column_stack([lows, highs, counts / len(returns) * 100]),
+                hovertemplate="%{customdata[0]}% to %{customdata[1]}%<br>%{y} days (%{customdata[2]:.0f}%)<extra></extra>",
+            )
+        )
+        density_axis = {"yaxis": "y2"}
 
     fig.add_trace(
         go.Histogram(
@@ -261,6 +286,7 @@ def render_returns_histogram(returns, ticker, baseline_returns=None, baseline_la
             histnorm="probability density",
             name=ticker,
             marker_color=HISTOGRAM_BAR_COLOR,
+            **density_axis,
         )
     )
 
@@ -280,6 +306,7 @@ def render_returns_histogram(returns, ticker, baseline_returns=None, baseline_la
                 mode="lines",
                 name="Normal fit",
                 line={"color": HISTOGRAM_CURVE_COLOR, "width": 2},
+                **density_axis,
             )
         )
 
@@ -296,6 +323,7 @@ def render_returns_histogram(returns, ticker, baseline_returns=None, baseline_la
                     mode="lines",
                     name=f"{baseline_label} Normal fit",
                     line={"color": HISTOGRAM_BASELINE_CURVE_COLOR, "width": 2},
+                    **density_axis,
                 )
             )
 
@@ -313,6 +341,7 @@ def render_returns_histogram(returns, ticker, baseline_returns=None, baseline_la
             customdata=returns.index.strftime("%b %d, %Y"),
             hovertemplate="%{x:.2f}%<br>%{customdata}<extra></extra>",
             showlegend=False,
+            **density_axis,
         )
     )
 
@@ -323,6 +352,17 @@ def render_returns_histogram(returns, ticker, baseline_returns=None, baseline_la
         bargap=0.02,
         legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "xanchor": "right", "x": 1},
     )
+    if bucket_size:
+        fig.update_layout(
+            xaxis={
+                "range": [-DAILY_CHANGE_AXIS_LIMIT, DAILY_CHANGE_AXIS_LIMIT],
+                "tickmode": "linear",
+                "tick0": 0,
+                "dtick": bucket_size,
+            },
+            yaxis={"title": "Days", "side": "right", "showgrid": False},
+            yaxis2={"title": "Density", "overlaying": "y", "side": "left"},
+        )
 
     st.plotly_chart(fig)
 

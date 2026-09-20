@@ -228,4 +228,5 @@ def render():
             "Portfolio",
             baseline_returns=baseline_metrics["returns"] if baseline_metrics is not None else None,
             baseline_label=compare_ticker,
+            bucket_size=5,
         )
