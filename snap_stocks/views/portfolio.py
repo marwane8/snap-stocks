@@ -3,7 +3,7 @@ import streamlit as st
 
 from .. import charts, metrics
 from ..data import fetch_history
-from ..events import resolve_time_period
+from ..time_period import render_time_period
 
 DEFAULT_COMPARE_TICKER = "SPY"
 DEFAULT_ALLOCATIONS = [("VUG", 50000.0), ("USO", 50000.0), ("GLD", 50000.0)]
@@ -134,7 +134,7 @@ def render():
     st.caption("Enter a ticker and dollar amount, then add up to 10 to build a hypothetical portfolio.")
 
     allocations = _render_allocation_inputs()
-    label = charts.render_time_period_selectbox()
+    start_date, end_date, label = render_time_period("portfolio")
     compare_ticker = charts.render_ticker_selectbox(
         "Compare stock", default=DEFAULT_COMPARE_TICKER, key="portfolio_compare_ticker"
     )
@@ -143,7 +143,7 @@ def render():
         st.info("Enter at least one ticker and dollar amount to simulate a portfolio.")
         return
 
-    period_kwargs = resolve_time_period(label)
+    period_kwargs = {"start": start_date, "end": end_date + pd.Timedelta(days=1)}
     portfolio, allocations = _build_portfolio_history(allocations, period_kwargs)
     if portfolio is None:
         return

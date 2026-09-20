@@ -19,6 +19,7 @@ RANGE_GAUGE_COLORS = [NEGATIVE_COLOR, "#f59e0b", "#86efac", POSITIVE_COLOR]  # r
 NORMALIZED_AXIS_TICK = 0.1
 NORMALIZED_AXIS_TICK_LONG_RANGE = 1 # widens past NORMALIZED_LONG_RANGE_YEARS so gridlines don't crowd
 NORMALIZED_LONG_RANGE_YEARS = 5
+NORMALIZED_BASELINE_COLOR = "#ffffff"  # white - the 1.00 starting-value reference line
 
 
 def render_time_period_selectbox(default="1y"):
@@ -111,6 +112,9 @@ def render_normalized_chart(series_by_label, colors=None):
         if span_years > NORMALIZED_LONG_RANGE_YEARS
         else NORMALIZED_AXIS_TICK
     )
+
+    # Emphasized 1.00 line marks the period's starting value (the chart's center).
+    fig.add_hline(y=1, line={"width": 2, "color": NORMALIZED_BASELINE_COLOR}, layer="below")
 
     fig.update_layout(
         xaxis_title="Date",
