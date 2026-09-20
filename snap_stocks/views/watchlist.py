@@ -1,10 +1,9 @@
-import datetime
-
 import pandas as pd
 import streamlit as st
 
 from .. import charts, metrics
 from ..data import fetch_history
+from ..time_period import render_time_period
 
 WATCHLIST_TICKERS = [
     "VUG",
@@ -18,12 +17,7 @@ TICKER_COLORS = {
     "USO": "#8b4513", 
 }  
 
-SLIDER_LOOKBACK_YEARS = 10
-DATE_RANGE_KEY = "watchlist_date_range"
-PILLS_CONTAINER_KEY = "watchlist_pills"
 TICKERS_CONTAINER_KEY = "watchlist_ticker_selector"
-# label -> days back from today; "YTD" and "Max" are special-cased below.
-PILL_RANGES = {"1M": 30, "3M": 91, "6M": 182, "YTD": None, "1Y": 365, "5Y": 365 * 5, "Max": None}
 
 
 def _fetch_52_week_stats(ticker):
@@ -31,26 +25,6 @@ def _fetch_52_week_stats(ticker):
     if history.empty:
         return None
     return {"ticker": ticker, **metrics.compute_price_range(history)}
-
-
-def _apply_pill_range():
-    """Callback for the quick-range pills - runs before the script reruns,
-    so writing the slider's own key here is the safe way to move it (setting
-    a key-bound widget's value only works before that widget is created)."""
-    selection = st.session_state.get("watchlist_pill")
-    if not selection:
-        return
-
-    today = datetime.date.today()
-    earliest = today - datetime.timedelta(days=365 * SLIDER_LOOKBACK_YEARS)
-    if selection == "YTD":
-        start = datetime.date(today.year, 1, 1)
-    elif selection == "Max":
-        start = earliest
-    else:
-        start = today - datetime.timedelta(days=PILL_RANGES[selection])
-
-    st.session_state[DATE_RANGE_KEY] = (max(start, earliest), today)
 
 
 def render():
@@ -72,37 +46,16 @@ def render():
 
     st.subheader("Price")
 
-    today = datetime.date.today()
-    if DATE_RANGE_KEY not in st.session_state:
-        st.session_state[DATE_RANGE_KEY] = (today - datetime.timedelta(days=365), today)
+    start_date, end_date, _ = render_time_period("watchlist")
 
-    start_date, end_date = st.slider(
-        "Time period",
-        min_value=today - datetime.timedelta(days=365 * SLIDER_LOOKBACK_YEARS),
-        max_value=today,
-        key=DATE_RANGE_KEY,
-    )
-
-    # Hidden on narrow/mobile widths - both controls add little value on a
-    # small screen (the slider above is already the primary way to set a
-    # range, and mobile just shows every tracked ticker rather than picking).
+    # Hidden on narrow/mobile widths - mobile just shows every tracked ticker
+    # rather than picking.
     st.markdown(
         "<style>@media (max-width: 640px) { div[class*='st-key-"
-        + PILLS_CONTAINER_KEY
-        + "'], div[class*='st-key-"
         + TICKERS_CONTAINER_KEY
         + "'] { display: none; } }</style>",
         unsafe_allow_html=True,
     )
-    with st.container(key=PILLS_CONTAINER_KEY):
-        st.pills(
-            "Quick range",
-            options=list(PILL_RANGES.keys()),
-            key="watchlist_pill",
-            on_change=_apply_pill_range,
-            label_visibility="collapsed",
-        )
-
     visible_tickers = []
     with st.container(key=TICKERS_CONTAINER_KEY):
         show_cols = st.columns(len(WATCHLIST_TICKERS))

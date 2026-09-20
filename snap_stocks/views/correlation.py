@@ -5,7 +5,7 @@ import streamlit as st
 
 from .. import charts, metrics
 from ..data import fetch_closes, load_ticker_directory
-from ..events import resolve_time_period
+from ..time_period import render_time_period
 
 
 def _init_state():
@@ -60,7 +60,7 @@ def _render_controls():
         key="corr_tickers",
     )
 
-    selection = charts.render_time_period_selectbox()
+    start_date, end_date, selection = render_time_period("corr")
 
     col_reset, col_calc = st.columns([1, 1])
     with col_reset:
@@ -83,7 +83,7 @@ def _render_controls():
             st.session_state.corr_results = None
         else:
             with st.spinner("Fetching data..."):
-                corr, prices = _calculate(tickers, **resolve_time_period(selection))
+                corr, prices = _calculate(tickers, start=start_date, end=end_date + pd.Timedelta(days=1))
                 st.session_state.corr_results = corr
                 st.session_state.corr_prices = prices
                 st.session_state.corr_results_label = selection

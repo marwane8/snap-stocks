@@ -3,7 +3,6 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from .data import load_ticker_directory
-from .events import TIME_PERIOD_OPTIONS
 
 PALETTE = ["#dc2626", "#93c5fd"]  # red, light blue
 POSITIVE_COLOR = "#16a34a"  # green
@@ -20,13 +19,6 @@ NORMALIZED_AXIS_TICK = 0.1
 NORMALIZED_AXIS_TICK_LONG_RANGE = 1 # widens past NORMALIZED_LONG_RANGE_YEARS so gridlines don't crowd
 NORMALIZED_LONG_RANGE_YEARS = 5
 NORMALIZED_BASELINE_COLOR = "#ffffff"  # white - the 1.00 starting-value reference line
-
-
-def render_time_period_selectbox(default="1y"):
-    """The single 'Time period' dropdown (rolling periods + named crash events)
-    shared by every view, so each one doesn't build its own options list."""
-    index = TIME_PERIOD_OPTIONS.index(default) if default in TIME_PERIOD_OPTIONS else 0
-    return st.selectbox("Time period", TIME_PERIOD_OPTIONS, index=index)
 
 
 def render_ticker_selectbox(label, default, key, placeholder=None, label_visibility="visible"):

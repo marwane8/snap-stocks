@@ -3,7 +3,7 @@ import streamlit as st
 
 from .. import charts, metrics
 from ..data import fetch_history
-from ..events import resolve_time_period
+from ..time_period import render_time_period
 
 BASELINE = "SPY"
 
@@ -12,12 +12,12 @@ def render():
     st.title("Stock Explorer")
 
     ticker = charts.render_ticker_selectbox("Ticker", default="AAPL", key="explorer_ticker")
-    label = charts.render_time_period_selectbox()
+    start_date, end_date, label = render_time_period("explorer")
 
     if not ticker:
         return
 
-    history = fetch_history(ticker, **resolve_time_period(label))
+    history = fetch_history(ticker, start=start_date, end=end_date + pd.Timedelta(days=1))
 
     if history.empty:
         st.warning(f"No data found for '{ticker}'.")

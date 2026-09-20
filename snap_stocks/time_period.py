@@ -13,81 +13,119 @@ PILL_RANGES = {"5D": 5, "1M": 30, "3M": 91, "6M": 182, "YTD": None, "1Y": 365, "
 EVENT_NAMES = [e["name"] for e in EVENTS]
 
 
+CUSTOM_OPTION = "Custom range"
+MOBILE_MAX_WIDTH = 640  # px; matches the breakpoint used elsewhere in the app
+
+
 def _keys(prefix):
-    return f"{prefix}_date_range", f"{prefix}_range_pill", f"{prefix}_event_pill"
+    return {
+        "range": f"{prefix}_date_range",
+        "pill": f"{prefix}_range_pill",
+        "event": f"{prefix}_event_pill",
+        "select": f"{prefix}_preset_select",
+    }
 
 
-def _apply_range_pill(prefix):
-    """Callbacks run before the rerun, the only point a key-bound widget's
-    value (the slider) can be written."""
-    range_key, pill_key, event_key = _keys(prefix)
-    selection = st.session_state.get(pill_key)
-    if not selection:
-        return
-    st.session_state[event_key] = None
-
+def _select_preset(prefix, name):
+    """Move the slider to preset `name` (a PILL_RANGES label, an event name,
+    or CUSTOM_OPTION) and mirror it on every control. Only safe from a
+    callback (or before the widgets are created), since it writes widget keys."""
+    k = _keys(prefix)
     today = datetime.date.today()
-    if selection == "YTD":
-        start = datetime.date(today.year, 1, 1)
-    elif selection == "Max":
-        start = SLIDER_MIN_DATE
+    st.session_state[k["pill"]] = name if name in PILL_RANGES else None
+    st.session_state[k["event"]] = name if name in EVENTS_BY_NAME else None
+    st.session_state[k["select"]] = name
+
+    if name in EVENTS_BY_NAME:
+        event = EVENTS_BY_NAME[name]
+        st.session_state[k["range"]] = (
+            datetime.date.fromisoformat(event["start"]),
+            datetime.date.fromisoformat(event["end"]),
+        )
+    elif name == "YTD":
+        st.session_state[k["range"]] = (datetime.date(today.year, 1, 1), today)
+    elif name == "Max":
+        st.session_state[k["range"]] = (SLIDER_MIN_DATE, today)
+    elif name in PILL_RANGES:
+        start = today - datetime.timedelta(days=PILL_RANGES[name])
+        st.session_state[k["range"]] = (max(start, SLIDER_MIN_DATE), today)
+
+
+def _on_pick(prefix, source):
+    """Callback for the pills / dropdown. `source` is the session-state key
+    holding the pick; clearing a pill leaves the slider where it is."""
+    name = st.session_state.get(_keys(prefix)[source])
+    if name and name != CUSTOM_OPTION:
+        _select_preset(prefix, name)
     else:
-        start = today - datetime.timedelta(days=PILL_RANGES[selection])
-    st.session_state[range_key] = (max(start, SLIDER_MIN_DATE), today)
+        _on_slider(prefix)
 
 
-def _apply_event_pill(prefix):
-    range_key, pill_key, event_key = _keys(prefix)
-    selection = st.session_state.get(event_key)
-    if not selection:
-        return
-    st.session_state[pill_key] = None
-    event = EVENTS_BY_NAME[selection]
-    st.session_state[range_key] = (
-        datetime.date.fromisoformat(event["start"]),
-        datetime.date.fromisoformat(event["end"]),
-    )
-
-
-def _clear_pills(prefix):
-    _, pill_key, event_key = _keys(prefix)
-    st.session_state[pill_key] = None
-    st.session_state[event_key] = None
+def _on_slider(prefix):
+    k = _keys(prefix)
+    st.session_state[k["pill"]] = None
+    st.session_state[k["event"]] = None
+    st.session_state[k["select"]] = CUSTOM_OPTION
 
 
 def render_time_period(prefix):
-    """Slider + range pills + event pills; returns (start, end, label).
+    """Date-range slider with quick-range and event presets; returns
+    (start, end, label). On desktop the presets are pills, on narrow screens
+    a single dropdown (both are rendered, CSS hides the one that doesn't fit).
     `prefix` namespaces the session-state keys so each view keeps its own range."""
-    range_key, pill_key, event_key = _keys(prefix)
+    k = _keys(prefix)
     today = datetime.date.today()
-    if range_key not in st.session_state:
-        st.session_state[range_key] = (today - datetime.timedelta(days=365), today)
-        st.session_state[pill_key] = "1Y"
+    if k["range"] not in st.session_state:
+        st.session_state[k["range"]] = (today - datetime.timedelta(days=365), today)
+        st.session_state[k["pill"]] = "1Y"
+        st.session_state[k["event"]] = None
+        st.session_state[k["select"]] = "1Y"
 
     start, end = st.slider(
         "Time period",
         min_value=SLIDER_MIN_DATE,
         max_value=today,
-        key=range_key,
-        on_change=_clear_pills,
+        key=k["range"],
+        on_change=_on_slider,
         args=(prefix,),
-    )
-    st.pills(
-        "Quick range",
-        options=list(PILL_RANGES.keys()),
-        key=pill_key,
-        on_change=_apply_range_pill,
-        args=(prefix,),
-        label_visibility="collapsed",
-    )
-    st.pills(
-        "Events",
-        options=EVENT_NAMES,
-        key=event_key,
-        on_change=_apply_event_pill,
-        args=(prefix,),
-        label_visibility="collapsed",
     )
 
-    label = st.session_state.get(event_key) or st.session_state.get(pill_key)
-    return start, end, label or f"{start:%b %d, %Y} – {end:%b %d, %Y}"
+    pills_container, select_container = f"{prefix}_time_pills", f"{prefix}_time_select"
+    st.markdown(
+        f"<style>@media (max-width: {MOBILE_MAX_WIDTH}px) {{ div[class*='st-key-{pills_container}'] "
+        "{ display: none; } }"
+        f" @media (min-width: {MOBILE_MAX_WIDTH + 1}px) {{ div[class*='st-key-{select_container}'] "
+        "{ display: none; } }</style>",
+        unsafe_allow_html=True,
+    )
+    with st.container(key=pills_container):
+        st.pills(
+            "Quick range",
+            options=list(PILL_RANGES.keys()),
+            key=k["pill"],
+            on_change=_on_pick,
+            args=(prefix, "pill"),
+            label_visibility="collapsed",
+        )
+        st.pills(
+            "Events",
+            options=EVENT_NAMES,
+            key=k["event"],
+            on_change=_on_pick,
+            args=(prefix, "event"),
+            label_visibility="collapsed",
+        )
+    with st.container(key=select_container):
+        st.selectbox(
+            "Preset range",
+            options=[CUSTOM_OPTION, *PILL_RANGES, *EVENT_NAMES],
+            key=k["select"],
+            on_change=_on_pick,
+            args=(prefix, "select"),
+            label_visibility="collapsed",
+        )
+
+    label = st.session_state.get(k["select"])
+    if not label or label == CUSTOM_OPTION:
+        label = f"{start:%b %d, %Y} – {end:%b %d, %Y}"
+    return start, end, label
