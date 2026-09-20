@@ -1,9 +1,88 @@
+import datetime
+
 import pandas as pd
 import streamlit as st
 
 from .. import charts, metrics
 from ..data import fetch_history
-from ..events import resolve_time_period
+from ..events import EVENTS, EVENTS_BY_NAME
+
+# Early enough to cover the oldest named event (Dot-Com Crash).
+SLIDER_MIN_DATE = datetime.date(2000, 1, 1)
+DATE_RANGE_KEY = "compare_date_range"
+RANGE_PILL_KEY = "compare_range_pill"
+EVENT_PILL_KEY = "compare_event_pill"
+# label -> days back from today; "YTD" and "Max" are special-cased below.
+PILL_RANGES = {"5D": 5, "1M": 30, "3M": 91, "6M": 182, "YTD": None, "1Y": 365, "2Y": 365 * 2, "3Y": 365 * 3, "5Y": 365 * 5, "10Y": 365 * 10, "Max": None}
+EVENT_NAMES = [e["name"] for e in EVENTS]
+
+
+def _apply_range_pill():
+    """Callbacks run before the rerun, the only point a key-bound widget's
+    value (the slider) can be written."""
+    selection = st.session_state.get(RANGE_PILL_KEY)
+    if not selection:
+        return
+    st.session_state[EVENT_PILL_KEY] = None
+
+    today = datetime.date.today()
+    if selection == "YTD":
+        start = datetime.date(today.year, 1, 1)
+    elif selection == "Max":
+        start = SLIDER_MIN_DATE
+    else:
+        start = today - datetime.timedelta(days=PILL_RANGES[selection])
+    st.session_state[DATE_RANGE_KEY] = (max(start, SLIDER_MIN_DATE), today)
+
+
+def _apply_event_pill():
+    selection = st.session_state.get(EVENT_PILL_KEY)
+    if not selection:
+        return
+    st.session_state[RANGE_PILL_KEY] = None
+    event = EVENTS_BY_NAME[selection]
+    st.session_state[DATE_RANGE_KEY] = (
+        datetime.date.fromisoformat(event["start"]),
+        datetime.date.fromisoformat(event["end"]),
+    )
+
+
+def _clear_pills():
+    st.session_state[RANGE_PILL_KEY] = None
+    st.session_state[EVENT_PILL_KEY] = None
+
+
+def _render_time_period():
+    """Slider + range pills + event pills; returns (start, end, label)."""
+    today = datetime.date.today()
+    if DATE_RANGE_KEY not in st.session_state:
+        st.session_state[DATE_RANGE_KEY] = (today - datetime.timedelta(days=365), today)
+        st.session_state[RANGE_PILL_KEY] = "1Y"
+
+    start, end = st.slider(
+        "Time period",
+        min_value=SLIDER_MIN_DATE,
+        max_value=today,
+        key=DATE_RANGE_KEY,
+        on_change=_clear_pills,
+    )
+    st.pills(
+        "Quick range",
+        options=list(PILL_RANGES.keys()),
+        key=RANGE_PILL_KEY,
+        on_change=_apply_range_pill,
+        label_visibility="collapsed",
+    )
+    st.pills(
+        "Events",
+        options=EVENT_NAMES,
+        key=EVENT_PILL_KEY,
+        on_change=_apply_event_pill,
+        label_visibility="collapsed",
+    )
+
+    label = st.session_state.get(EVENT_PILL_KEY) or st.session_state.get(RANGE_PILL_KEY)
+    return start, end, label or f"{start:%b %d, %Y} – {end:%b %d, %Y}"
 
 
 def render():
@@ -15,7 +94,7 @@ def render():
     with col2:
         ticker_b = charts.render_ticker_selectbox("Ticker B", default="SPY", key="compare_ticker_b")
 
-    label = charts.render_time_period_selectbox()
+    start_date, end_date, label = _render_time_period()
 
     if not ticker_a or not ticker_b:
         return
@@ -24,7 +103,7 @@ def render():
         st.warning("Enter two different tickers to compare.")
         return
 
-    period_kwargs = resolve_time_period(label)
+    period_kwargs = {"start": start_date, "end": end_date + pd.Timedelta(days=1)}
     history_a = fetch_history(ticker_a, **period_kwargs)
     history_b = fetch_history(ticker_b, **period_kwargs)
 
