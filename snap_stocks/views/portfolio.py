@@ -6,8 +6,9 @@ from ..data import fetch_history
 from ..time_period import render_time_period
 
 DEFAULT_COMPARE_TICKER = "SPY"
-DEFAULT_ALLOCATIONS = [("VUG", 50000.0), ("USO", 50000.0), ("GLD", 50000.0)]
+DEFAULT_ALLOCATIONS = [("VUG", 10000.0), ("USO", 10000.0), ("GLD", 10000.0)]
 MAX_ROWS = 10
+NEW_ROW_AMOUNT = 10000.0
 
 
 def _init_row_state():
@@ -24,8 +25,10 @@ def _init_row_state():
 
 def _add_row():
     if len(st.session_state.portfolio_row_ids) < MAX_ROWS:
-        st.session_state.portfolio_row_ids.append(st.session_state.portfolio_next_row_id)
+        row_id = st.session_state.portfolio_next_row_id
+        st.session_state.portfolio_row_ids.append(row_id)
         st.session_state.portfolio_next_row_id += 1
+        st.session_state[f"portfolio_amount_{row_id}"] = NEW_ROW_AMOUNT
 
 
 def _remove_row(row_id):
@@ -64,7 +67,6 @@ def _render_allocation_inputs():
                 f"Amount (row {row_id})",
                 key=f"portfolio_amount_{row_id}",
                 min_value=0.0,
-                value=0.0,
                 step=100.0,
                 format="%.2f",
                 label_visibility="collapsed",
